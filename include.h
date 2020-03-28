@@ -8,6 +8,11 @@
 
 #define LINUX // Target os
 
+#define SLOTMACHINE_NAME "YetAnotherSlotProject"
+
+#define SCREEN_X 640
+#define SCREEN_Y 480
+
 // Pour la futur portabilité
 #ifdef LINUX
 #define CLEAR "clear"
