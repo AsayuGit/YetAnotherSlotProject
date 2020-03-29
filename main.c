@@ -4,8 +4,21 @@
 #define NBL 6
 #define WIN 14
 
-void clearInputBuffer (void) {
+void clearInputBuffer (void) { // Clear stdin
     while ((getchar()) != '\n');
+}
+
+void LoadTabFromFile(int TabY, int TabX, char CardIndex[TabY][TabX], FILE* FileStream){ // Charge un fichier dans un tableau char**
+    for (int i = 0; i < TabY; i++){
+        fgets(CardIndex[i], TabX, FileStream); // récupère une ligne d'un fichier
+        //fscanf(FileStream, "%[^\n]", CardIndex[i]);
+    }
+}
+
+void DisplayTab(int TabY, int TabX, char CardIndex[TabY][TabX]){ // Affiche le contenue d'un tableau char**
+    for (int i = 0; i < TabY; i++){
+        printf("%3d %s",i, CardIndex[i]); // récupère une ligne d'un tableau char**
+    }
 }
 
 int main(int argc, char *argv[]){
@@ -17,6 +30,9 @@ int main(int argc, char *argv[]){
     char WinTable[WIN][4] = {"BON", "BEL", "BOL", "SOL", "SEL", "LES", "OSS", "BEN", "SEE", "NEO", "NOS", "LOL", "SON", "ONE"}; // Les combinaison gagnantes
     int WinRewards[WIN] = {1000, 500, 300, 250, 200, 150, 117, 50, 45, 40, 35, 30, 25, 1}; // Les gains associés
     char Slots[4] = "LOL"; // La combinaison par défaut
+
+    FILE* SlotFont = NULL; // Notre fichier contenant les "Polices" a blit dans la console
+    Vector2i SlotSize; SlotSize.x = 0; SlotSize.y = 0;
 
     srand(time NULL); // Pour que rand() soit plus dificilement prédictible
 
@@ -30,7 +46,7 @@ int main(int argc, char *argv[]){
                 GUI = 1;
             }else if (strcmp(argv[i], "-OSS") == 0){ // Easter egg
                 printf("D'aucuns ont des aventures je suis une aventure.\n");
-                goto Shutdown;
+                exit(-1);
             }
         }
     }
@@ -38,18 +54,29 @@ int main(int argc, char *argv[]){
     if (GUI){ // A effectuer seulement si l'utilisateur a choisi une gui
         // Initialisations liée a la SDL
         if (SDL_Init(SDL_INIT_VIDEO) != 0){ // initialisation de la sdl + Gestion des erreurs
-            fprintf(stderr, "Erreur a l'initialisation de la SDL : %s", SDL_GetError()); // On affiche le message d'erreur s'il y en a un
-            ReturnStatus = -1;
-            goto Shutdown;
+            fprintf(stderr, "Erreur a l'initialisation de la SDL : %s\n", SDL_GetError()); // On affiche le message d'erreur s'il y en a un
+            exit(-1);
         }
 
         MainWindow = SDL_CreateWindow(SLOTMACHINE_NAME, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, SCREEN_X,SCREEN_Y, SDL_WINDOW_SHOWN);
         if (MainWindow == NULL){ // Gestion des erreurs (Creation de la fenêtre)
-            fprintf(stderr, "Erreur a la creation de la fenêtre : %s", SDL_GetError()); // On affiche le message d'erreur s'il y en a un
-            ReturnStatus = -1;
-            goto Shutdown;
+            fprintf(stderr, "Erreur a la creation de la fenêtre : %s\n", SDL_GetError()); // On affiche le message d'erreur s'il y en a un
+            exit(-1);
         }
     }
+
+    if ((SlotFont = fopen(FontPath, "r")) == NULL){
+        fprintf(stderr, "Erreur au chargement des cartes\n");
+        exit(-1);
+    }
+    fscanf(SlotFont, "%d %d", &SlotSize.x, &SlotSize.y); fseek(SlotFont, 1, SEEK_CUR);
+    SlotSize.x += 2; // +1 \n +1 \0
+    SlotSize.y *= NBL; // on a la taille d'une carte on veut toutes les cartes
+
+    char CardIndex[SlotSize.y][SlotSize.x]; // On déclare un tableau pouvant contenir toutes les cartes
+    LoadTabFromFile(SlotSize.y, SlotSize.x, CardIndex, SlotFont); // On charge nottre fichier dans notre tableau
+    //DisplayTab(SlotSize.y, SlotSize.x, CardIndex); // On affiche le tableau pour vérifier que tout est bon
+    //exit(-1);
 
 
     while (1){ // Main loop
@@ -101,6 +128,7 @@ int main(int argc, char *argv[]){
     }
 
 Shutdown:
+    fclose(SlotFont);
     if (GUI){
         SDL_DestroyWindow(MainWindow); // On détruit la fenêtre
         SDL_Quit(); // On quitte la SDL avant de quitter notre programme

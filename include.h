@@ -1,8 +1,8 @@
 #ifndef INCLUDE
 #define INCLUDE
 
-#include <stdio.h>
 #include <stdlib.h>
+#include <stdio.h>
 #include <time.h>
 #include <string.h>
 
@@ -19,5 +19,14 @@
 #elif WINDOWS
 #define CLEAR "cls"
 #endif
+
+#define FontPath "Fonts/SlotFont.txt"
+//#define FontPath "Fonts/Test.txt"
+
+typedef struct Vector2i {
+    int x;
+    int y;
+} Vector2i;
+
 
 #endif
