@@ -40,13 +40,14 @@ void DisplayCardAt(int TabY, int TabX, char CardIndex[TabY][TabX], int CardID, i
 
 int main(int argc, char *argv[]){
     // Déclaration des variables principales
-    int Gains = 0, Credits = 0, Mise = 0, BankIN = 0;
+    int Gains = 0, Credits = 0, Mise = 0, MaxMise = 3, BankIN = 0;
     char GUI = 0, ReturnStatus = 0; // Booléen de sélection (char car il n'a besoin que d'etre 0 ou 1)
 
     char TabDeck[NBL] = "BELNOS"; // 0 -> 5 Les lettres qui peuvent tomber
     char WinTable[WIN][4] = {"BON", "BEL", "BOL", "SOL", "SEL", "LES", "OSS", "BEN", "SEE", "NEO", "NOS", "LOL", "SON", "ONE"}; // Les combinaison gagnantes
     int WinRewards[WIN] = {1000, 500, 300, 250, 200, 150, 117, 50, 45, 40, 35, 30, 25, 1}; // Les gains associés
     char Slots[4] = "LOL"; // La combinaison par défaut
+    int SlotIndex[3] = {2, 4, 2}; // Index de la combinaison par défaut
 
     FILE* SlotFont = NULL; // Notre fichier contenant les "Polices" a blit dans la console
     Vector2i SlotSize; SlotSize.x = 0; SlotSize.y = 0;
@@ -94,18 +95,19 @@ int main(int argc, char *argv[]){
 
     char CardIndex[SlotSize.y][SlotSize.x]; // On déclare un tableau pouvant contenir toutes les cartes
     LoadTabFromFile(SlotSize.y, SlotSize.x, CardIndex, SlotFont); // On charge nottre fichier dans notre tableau
-    //DisplayTab(SlotSize.y, SlotSize.x, CardIndex); // On affiche le tableau pour vérifier que tout est bon
-    
-    //DisplayCardAt(SlotSize.y, SlotSize.x, CardIndex, 0, CardSize, 10, 10); // B
-    //DisplayCardAt(SlotSize.y, SlotSize.x, CardIndex, 1, CardSize, 10, SlotSize.x + 10); // E
-    //DisplayCardAt(SlotSize.y, SlotSize.x, CardIndex, 2, CardSize, 10, 2*SlotSize.x + 10); // L
-    //exit(-1);
 
     SetConsoleSize(LINES, COLUMNS); // On standardise la taille de la console affin d'éviter les problèmes d'affichage
 
     while (1){ // Main loop
         system(CLEAR); // Clear the console
-        printf("Gains : %d | Credits : %d | Mise : %d | Slots : %s\n", Gains, Credits, Mise, Slots); // Header
+
+        // On Affiche les cartes du précédent tirage
+        DisplayCardAt(SlotSize.y, SlotSize.x, CardIndex, SlotIndex[0], CardSize, 2, 10); // Card 1
+        DisplayCardAt(SlotSize.y, SlotSize.x, CardIndex, SlotIndex[1], CardSize, 2, SlotSize.x + 10); // Card 2
+        DisplayCardAt(SlotSize.y, SlotSize.x, CardIndex, SlotIndex[2], CardSize, 2, 2*SlotSize.x + 10); // Card 3
+
+        SetCursorAt(CardSize + 4, 25);
+        printf("Gains : %d | Credits : %d | Mise : %d\n", Gains, Credits, Mise); // Header
         
         if (Credits == 0){ // BankIN (Fin de partie / Début de partie quand les crédits tombent a 0)
             printf("\nVeuiller insérer des credits pour continuer : ");
@@ -117,9 +119,14 @@ int main(int argc, char *argv[]){
             }
             Credits += BankIN;
         }else { // Sloot Loop
-            printf("\nVeuiller entrer la mise (1 - 3) 0 pour encaisser : ");
+            if (Credits < 3){ // On calcul la mise maximum affin d'éviter que l'utilisateur mise plus que ce qu'il a crédité
+                MaxMise = Credits;
+            }else {
+                MaxMise = 3;
+            }
+            printf("\nVeuiller entrer la mise (1 - %d) 0 pour encaisser : ", MaxMise);
             Mise = -1;
-            while ((Mise < 0) || (Mise > 3) || (Mise > Credits)){ // Saisie sécurisé
+            while ((Mise < 0) || (Mise > MaxMise)){ // Saisie sécurisé
                 while (scanf("%d", &Mise) == 0){
                     clearInputBuffer();
                 }
@@ -137,7 +144,8 @@ int main(int argc, char *argv[]){
             
             // Génération aléatoire des slots (tirage)
             for (int i = 0; i < 3; i++){
-                Slots[i] = TabDeck[rand()%NBL];
+                SlotIndex[i] = rand()%NBL;
+                Slots[i] = TabDeck[SlotIndex[i]];
             }
 
             //strcpy(Slots, "LOL");
