@@ -8,6 +8,16 @@ void clearInputBuffer (void) { // Clear stdin
     while ((getchar()) != '\n');
 }
 
+// Change la taille de la console
+void SetConsoleSize(int Height, int Width){
+    printf("\e[8;%d;%dt\n", Height, Width);
+}
+
+// Place le curseur au coordonées (y, x)
+void SetCursorAt(int y, int x){
+    printf("\033[%d;%dH", y, x);
+}
+
 void LoadTabFromFile(int TabY, int TabX, char CardIndex[TabY][TabX], FILE* FileStream){ // Charge un fichier dans un tableau char**
     for (int i = 0; i < TabY; i++){
         fgets(CardIndex[i], TabX, FileStream); // récupère une ligne d'un fichier
@@ -18,6 +28,13 @@ void LoadTabFromFile(int TabY, int TabX, char CardIndex[TabY][TabX], FILE* FileS
 void DisplayTab(int TabY, int TabX, char CardIndex[TabY][TabX]){ // Affiche le contenue d'un tableau char**
     for (int i = 0; i < TabY; i++){
         printf("%3d %s",i, CardIndex[i]); // récupère une ligne d'un tableau char**
+    }
+}
+
+void DisplayCardAt(int TabY, int TabX, char CardIndex[TabY][TabX], int CardID, int CardYSize, int y, int x){ // Affiche une carte a une endroid précis de l'écran
+    for (int i = 0; i < CardYSize; i++){
+        SetCursorAt(y + i, x);
+        printf("%s", CardIndex[(CardID * CardYSize + i)]); // récupère une ligne d'un tableau char**
     }
 }
 
@@ -33,6 +50,7 @@ int main(int argc, char *argv[]){
 
     FILE* SlotFont = NULL; // Notre fichier contenant les "Polices" a blit dans la console
     Vector2i SlotSize; SlotSize.x = 0; SlotSize.y = 0;
+    int CardSize = 0;
 
     srand(time NULL); // Pour que rand() soit plus dificilement prédictible
 
@@ -71,13 +89,19 @@ int main(int argc, char *argv[]){
     }
     fscanf(SlotFont, "%d %d", &SlotSize.x, &SlotSize.y); fseek(SlotFont, 1, SEEK_CUR);
     SlotSize.x += 2; // +1 \n +1 \0
+    CardSize = SlotSize.y;
     SlotSize.y *= NBL; // on a la taille d'une carte on veut toutes les cartes
 
     char CardIndex[SlotSize.y][SlotSize.x]; // On déclare un tableau pouvant contenir toutes les cartes
     LoadTabFromFile(SlotSize.y, SlotSize.x, CardIndex, SlotFont); // On charge nottre fichier dans notre tableau
     //DisplayTab(SlotSize.y, SlotSize.x, CardIndex); // On affiche le tableau pour vérifier que tout est bon
+    
+    //DisplayCardAt(SlotSize.y, SlotSize.x, CardIndex, 0, CardSize, 10, 10); // B
+    //DisplayCardAt(SlotSize.y, SlotSize.x, CardIndex, 1, CardSize, 10, SlotSize.x + 10); // E
+    //DisplayCardAt(SlotSize.y, SlotSize.x, CardIndex, 2, CardSize, 10, 2*SlotSize.x + 10); // L
     //exit(-1);
 
+    SetConsoleSize(LINES, COLUMNS); // On standardise la taille de la console affin d'éviter les problèmes d'affichage
 
     while (1){ // Main loop
         system(CLEAR); // Clear the console
