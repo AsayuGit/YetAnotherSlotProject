@@ -91,8 +91,9 @@ int main(int argc, char *argv[]){
 
     SDL_Texture* Faceplate;
     SDL_Texture* Digits[10]; // tableau contenant les numéro
+    SDL_Texture* Buttons; // Les différents boutons et leurs états
 
-    SDL_Rect Faceplate_DIM = {0}, Digits_DIM = {0};
+    SDL_Rect Faceplate_DIM = {0}, Digits_DIM = {0}, Buttons_DIM = {0};
 
     // Gestion des arguments
     if (argc > 1){ // Si il y a des arguments
@@ -134,6 +135,10 @@ int main(int argc, char *argv[]){
             sprintf(filename,ImagePath"digit%d.bmp", i);
             Digits[i] = loadImage(filename, Renderer);
         } SDL_QueryTexture(Digits[0], NULL, NULL, &Digits_DIM.w, &Digits_DIM.h);
+
+        Buttons = loadImage(ImagePath"buttons.bmp", Renderer);
+        Buttons_DIM.w = 175; Buttons_DIM.h = 125; // Vu que la texture contient tout les boutons on renseignes leur tailles manuellement
+
     }
 
     if ((SlotFont = fopen(FontPath, "r")) == NULL){
@@ -217,6 +222,10 @@ int main(int argc, char *argv[]){
             drawNB(Renderer, Digits, NULL, &(SDL_Rect){Faceplate_DIM.x + 120, Faceplate_DIM.y + 30, 23, 32}, (Vector2i){27, 0}, 4, Gains); // Affichage des gains
             drawNB(Renderer, Digits, NULL, &(SDL_Rect){Faceplate_DIM.x + 263, Faceplate_DIM.y + 30, 23, 32}, (Vector2i){27, 0}, 4, Credits); // Affichage du nombre de crédits
 
+            // On décompose les rect affin d'avoir un plus grand control sur leurs valeurs
+            SDL_RenderCopy(Renderer, Buttons, &(SDL_Rect){Buttons_DIM.w * 0, Buttons_DIM.h * 1, Buttons_DIM.w, Buttons_DIM.h}, &(SDL_Rect){Faceplate_DIM.x + 135, Faceplate_DIM.y + 90, Buttons_DIM.w / 2, Buttons_DIM.h / 2}); // Miser 1
+            SDL_RenderCopy(Renderer, Buttons, &(SDL_Rect){Buttons_DIM.w * 1, Buttons_DIM.h * 1, Buttons_DIM.w, Buttons_DIM.h}, &(SDL_Rect){Faceplate_DIM.x + 275, Faceplate_DIM.y + 90, Buttons_DIM.w / 2, Buttons_DIM.h / 2}); // Miser Max
+            SDL_RenderCopy(Renderer, Buttons, &(SDL_Rect){Buttons_DIM.w * 2, Buttons_DIM.h * 1, Buttons_DIM.w, Buttons_DIM.h}, &(SDL_Rect){Faceplate_DIM.x + 450, Faceplate_DIM.y + 90, Buttons_DIM.w / 2, Buttons_DIM.h / 2}); // Jouer
 
             SDL_RenderPresent(Renderer);
         }
