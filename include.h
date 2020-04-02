@@ -25,6 +25,7 @@
 
 #define FontPath "Fonts/SlotFont.txt"
 //#define FontPath "Fonts/Test.txt"
+#define ImagePath "Images/"
 
 typedef struct Vector2i {
     int x;

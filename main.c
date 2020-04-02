@@ -38,6 +38,24 @@ void DisplayCardAt(int TabY, int TabX, char CardIndex[TabY][TabX], int CardID, i
     }
 }
 
+SDL_Texture* loadImage(const char path[], SDL_Renderer* renderer){
+    // Nottre surface temporaire pour le chargement des textures
+    SDL_Surface* LoadingSurface = SDL_LoadBMP(path); // On charge le fichier en mémoire
+    SDL_Texture* ReturnTexture = NULL;
+    if (LoadingSurface == NULL){
+        fprintf(stderr, "Erreur chargement surface : %s\n", SDL_GetError());
+        exit(-1);
+    }
+    ReturnTexture = SDL_CreateTextureFromSurface(renderer, LoadingSurface); // On le "copie" en vram
+    if (ReturnTexture == NULL){
+        fprintf(stderr, "Erreur creation texture : %s\n", SDL_GetError());
+        exit(-1);
+    }
+    SDL_FreeSurface(LoadingSurface); // On libère la mémoire
+
+    return ReturnTexture;
+}
+
 int main(int argc, char *argv[]){
     // Déclaration des variables principales
     int Gains = 0, Credits = 0, Mise = 0, MaxMise = 3, BankIN = 0;
@@ -56,7 +74,13 @@ int main(int argc, char *argv[]){
     srand(time NULL); // Pour que rand() soit plus dificilement prédictible
 
     // Déclaration liée a la SDL
-    SDL_Window* MainWindow;
+    SDL_Window* MainWindow; // Fenêtre principale
+    SDL_Renderer* Renderer; // Structure nous permettant de dessinner dans la fenêtre
+
+    SDL_Texture* Faceplate;
+    SDL_Texture* Digits[10]; // tableau contenant les numéro
+
+    SDL_Rect Faceplate_DIM = {0}, Digits_DIM = {0};
 
     // Gestion des arguments
     if (argc > 1){ // Si il y a des arguments
@@ -82,6 +106,22 @@ int main(int argc, char *argv[]){
             fprintf(stderr, "Erreur a la creation de la fenêtre : %s\n", SDL_GetError()); // On affiche le message d'erreur s'il y en a un
             exit(-1);
         }
+
+        Renderer = SDL_CreateRenderer(MainWindow, -1, 0); // -1, 0 Essaye d'utiliser l'accélération matérielle sinon revient au rendu software
+        if (Renderer == NULL){
+            fprintf(stderr, "Erreur a la creation du renderer : %s\n", SDL_GetError());
+            exit(-1);
+        }
+
+        Faceplate = loadImage(ImagePath"faceplate.bmp", Renderer);
+        SDL_QueryTexture(Faceplate, NULL, NULL, &Faceplate_DIM.w, &Faceplate_DIM.h); // on récupère la taille de la texture
+        Faceplate_DIM.y = SCREEN_Y - Faceplate_DIM.h; // On déplace la texture en bas de l'écran
+
+        for (int i = 0; i < 10; i++){
+            char filename[11 + sizeof(ImagePath)]; // On aloue un buffer pour contenir le nom du fichier a charger
+            sprintf(filename,ImagePath"digit%d.bmp", i);
+            Digits[i] = loadImage(filename, Renderer);
+        } SDL_QueryTexture(Digits[0], NULL, NULL, &Digits_DIM.w, &Digits_DIM.h);
     }
 
     if ((SlotFont = fopen(FontPath, "r")) == NULL){
@@ -157,11 +197,17 @@ int main(int argc, char *argv[]){
             }
             Credits += Gains;
         }
+
+        if (GUI){
+            SDL_RenderCopy(Renderer, Faceplate, NULL, &Faceplate_DIM);
+            SDL_RenderPresent(Renderer);
+        }
     }
 
 Shutdown:
     fclose(SlotFont);
     if (GUI){
+        SDL_DestroyRenderer(Renderer); // On détruit le renderer
         SDL_DestroyWindow(MainWindow); // On détruit la fenêtre
         SDL_Quit(); // On quitte la SDL avant de quitter notre programme
     }
