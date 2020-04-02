@@ -56,6 +56,18 @@ SDL_Texture* loadImage(const char path[], SDL_Renderer* renderer){
     return ReturnTexture;
 }
 
+// Affiche un nombre avec des times (Algo droite gauche :3(comme quoi ça sert))
+void drawNB(SDL_Renderer* renderer, SDL_Texture* digitTabTexture[], SDL_Rect* srcrect, SDL_Rect* dstrect, Vector2i offset, int nbOfElements, int NB){
+    (*dstrect).x += offset.x * (nbOfElements - 1);
+    (*dstrect).y += offset.y * (nbOfElements);
+    for (int i = 0; i < nbOfElements; i++){
+        SDL_RenderCopy(renderer, digitTabTexture[NB % 10], srcrect, dstrect); // Affichage de la mise
+        (*dstrect).x -= offset.x;
+        (*dstrect).y -= offset.y;
+        NB /= 10;
+    }
+}
+
 int main(int argc, char *argv[]){
     // Déclaration des variables principales
     int Gains = 0, Credits = 0, Mise = 0, MaxMise = 3, BankIN = 0;
@@ -199,7 +211,13 @@ int main(int argc, char *argv[]){
         }
 
         if (GUI){
-            SDL_RenderCopy(Renderer, Faceplate, NULL, &Faceplate_DIM);
+            // Affichage des élémentes (Back to Front)
+            SDL_RenderCopy(Renderer, Faceplate, NULL, &Faceplate_DIM); // Affichage faceplate
+            SDL_RenderCopy(Renderer, Digits[Mise], NULL, &(SDL_Rect){Faceplate_DIM.x + 471, Faceplate_DIM.y + 30, 23, 32}); // Affichage de la mise
+            drawNB(Renderer, Digits, NULL, &(SDL_Rect){Faceplate_DIM.x + 120, Faceplate_DIM.y + 30, 23, 32}, (Vector2i){27, 0}, 4, Gains); // Affichage des gains
+            drawNB(Renderer, Digits, NULL, &(SDL_Rect){Faceplate_DIM.x + 263, Faceplate_DIM.y + 30, 23, 32}, (Vector2i){27, 0}, 4, Credits); // Affichage du nombre de crédits
+
+
             SDL_RenderPresent(Renderer);
         }
     }
