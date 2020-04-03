@@ -73,14 +73,31 @@ void animateSlots(SDL_Rect * coordinates,int originOffset, int stepOffset, int n
     (*coordinates).y = stepOffset * newID + originOffset;
 }
 
+void tirage(int * Gains, int Mise, char Slots[], char TabDeck[], int SlotIndex[], char WinTable[][4], int WinRewards[]){
+    // Génération aléatoire des slots (tirage)
+    for (int i = 0; i < 3; i++){
+        SlotIndex[i] = rand()%NBL; // int
+        Slots[i] = TabDeck[SlotIndex[i]]; // char
+    }
+
+        
+    *Gains = 0;
+    for (int i = 0; i < WIN; i++){ // Recherche d'une combinaison gagnante et calcul des gains
+        if (strcmp(Slots, WinTable[i]) == 0){
+            *Gains = WinRewards[i] * Mise;
+        }
+    }
+}
+
 int main(int argc, char *argv[]){
     // Déclaration des variables principales
-    int Gains = 0, Credits = 0, Mise = 0, MaxMise = 3, BankIN = 0;
+    int Gains = 0, Credits = 500, Mise = 0, MaxMise = 3, BankIN = 0, LastMise = 0;
     char GUI = 0, ReturnStatus = 0; // Booléen de sélection (char car il n'a besoin que d'etre 0 ou 1)
 
     char TabDeck[NBL] = "BELNOS"; // 0 -> 5 Les lettres qui peuvent tomber
-    char WinTable[WIN][4] = {"BON", "BEL", "BOL", "SOL", "SEL", "LES", "OSS", "BEN", "SEE", "NEO", "NOS", "LOL", "SON", "ONE"}; // Les combinaison gagnantes
-    int WinRewards[WIN] = {1000, 500, 300, 250, 200, 150, 117, 50, 45, 40, 35, 30, 25, 1}; // Les gains associés
+    //char WinTable[WIN][4] = {"BON", "BEL", "BOL", "SOL", "SEL", "LES", "OSS", "BEN", "SEE", "NEO", "NOS", "LOL", "SON", "ONE"}; // Les combinaison gagnantes
+    char WinTable[WIN][4] = {"EEE", "BNS", "BBB", "NNN", "SSS", "BSN", "SBN", "SNB", "NBS", "NSB", "LLL", "LOL", "SON", "ONE"}; // Les combinaison gagnantes
+    int WinRewards[WIN] = {4000, 400, 300, 200, 100, 50, 50, 50, 50, 50, 40, 30, 25, 1}; // Les gains associés
     char Slots[4] = "LOL"; // La combinaison par défaut
     int SlotIndex[3] = {2, 4, 2}; // Index de la combinaison par défaut
 
@@ -99,9 +116,12 @@ int main(int argc, char *argv[]){
     SDL_Texture* Buttons; // Les différents boutons et leurs états
     SDL_Texture* Reel; // Les rouleaux de cartes / slots
 
-    SDL_Rect Faceplate_DIM = {0}, Digits_DIM = {0}, Buttons_DIM = {0};
+    SDL_Rect Faceplate_DIM = {0}, Digits_DIM = {0}, Buttons_DIM = {0}, BMiser1 = {0}, BMiserMax = {0}, BJouer = {0};
     SDL_Rect Reel1 = {0}, Reel2 = {0}, Reel3 = {0}; // Coordonées pour les 3 slots
     Vector2i ReelOffset; ReelOffset.y = 340; ReelOffset.x = 448;
+
+    SDL_Event event; // Structure contenant tous les événements relatif a la fenêtre (souris clavier menus etc)
+    SDL_Point MousePosition;
 
     // Gestion des arguments
     if (argc > 1){ // Si il y a des arguments
@@ -146,6 +166,10 @@ int main(int argc, char *argv[]){
 
         Buttons = loadImage(ImagePath"buttons.bmp", Renderer);
         Buttons_DIM.w = 175; Buttons_DIM.h = 125; // Vu que la texture contient tout les boutons on renseignes leur tailles manuellement
+        // On initialise la position (et par conséquant leurs hitboxes) des différents boutons de l'interface
+        BMiser1 = (SDL_Rect){Faceplate_DIM.x + 135, Faceplate_DIM.y + 90, Buttons_DIM.w / 2, Buttons_DIM.h / 2};
+        BMiserMax = (SDL_Rect){Faceplate_DIM.x + 275, Faceplate_DIM.y + 90, Buttons_DIM.w / 2, Buttons_DIM.h / 2};
+        BJouer = (SDL_Rect){Faceplate_DIM.x + 450, Faceplate_DIM.y + 90, Buttons_DIM.w / 2, Buttons_DIM.h / 2};
 
         Reel = loadImage(ImagePath"reel.bmp", Renderer);
         SDL_QueryTexture(Reel, NULL, NULL, &Reel1.w, NULL); // On récupère seulement l'épaisseur de la texture
@@ -168,66 +192,99 @@ int main(int argc, char *argv[]){
     SetConsoleSize(LINES, COLUMNS); // On standardise la taille de la console affin d'éviter les problèmes d'affichage
 
     while (1){ // Main loop
-        system(CLEAR); // Clear the console
 
-        // On Affiche les cartes du précédent tirage
-        DisplayCardAt(SlotSize.y, SlotSize.x, CardIndex, SlotIndex[0], CardSize, 2, 10); // Card 1
-        DisplayCardAt(SlotSize.y, SlotSize.x, CardIndex, SlotIndex[1], CardSize, 2, SlotSize.x + 10); // Card 2
-        DisplayCardAt(SlotSize.y, SlotSize.x, CardIndex, SlotIndex[2], CardSize, 2, 2*SlotSize.x + 10); // Card 3
+        if (!GUI){ // If in console mode
+            system(CLEAR); // Clear the console
 
-        SetCursorAt(CardSize + 4, 25);
-        printf("Gains : %d | Credits : %d | Mise : %d\n", Gains, Credits, Mise); // Header
-        
-        if (Credits == 0){ // BankIN (Fin de partie / Début de partie quand les crédits tombent a 0)
-            printf("\nVeuiller insérer des credits pour continuer : ");
-            BankIN = 0;
-            while (BankIN <= 0){ // Saisie sécurisé
-                while (scanf("%d", &BankIN) == 0){
-                    clearInputBuffer();
-                }
-            }
-            Credits += BankIN;
-        }else { // Sloot Loop
-            if (Credits < 3){ // On calcul la mise maximum affin d'éviter que l'utilisateur mise plus que ce qu'il a crédité
-                MaxMise = Credits;
-            }else {
-                MaxMise = 3;
-            }
-            printf("\nVeuiller entrer la mise (1 - %d) 0 pour encaisser : ", MaxMise);
-            Mise = -1;
-            while ((Mise < 0) || (Mise > MaxMise)){ // Saisie sécurisé
-                while (scanf("%d", &Mise) == 0){
-                    clearInputBuffer();
-                }
-            }
-            if (Mise != 0){
-                Credits -= Mise;
-            }else{
-                exit(0); // L'utilisateur a choisi de repartir avec ses crédits
-            }
-            if (Credits < 0){ // On évité de passer dans les négatifs
-                Credits = 0;
-            }
+            // On Affiche les cartes du précédent tirage
+            DisplayCardAt(SlotSize.y, SlotSize.x, CardIndex, SlotIndex[0], CardSize, 2, 10); // Card 1
+            DisplayCardAt(SlotSize.y, SlotSize.x, CardIndex, SlotIndex[1], CardSize, 2, SlotSize.x + 10); // Card 2
+            DisplayCardAt(SlotSize.y, SlotSize.x, CardIndex, SlotIndex[2], CardSize, 2, 2*SlotSize.x + 10); // Card 3
 
-            // SlotMachine Logic
+            SetCursorAt(CardSize + 4, 25);
+            printf("Gains : %d | Credits : %d | Mise : %d\n", Gains, Credits, Mise); // Header
             
-            // Génération aléatoire des slots (tirage)
-            for (int i = 0; i < 3; i++){
-                SlotIndex[i] = rand()%NBL;
-                Slots[i] = TabDeck[SlotIndex[i]];
-            }
+            if (Credits == 0){ // BankIN (Fin de partie / Début de partie quand les crédits tombent a 0)
+                printf("\nVeuiller insérer des credits pour continuer : ");
+                BankIN = 0;
+                while (BankIN <= 0){ // Saisie sécurisé
+                    while (scanf("%d", &BankIN) == 0){
+                        clearInputBuffer();
+                    }
+                }
+                Credits += BankIN;
+            }else { // Sloot Loop
+                if (Credits < 3){ // On calcul la mise maximum affin d'éviter que l'utilisateur mise plus que ce qu'il a crédité
+                    MaxMise = Credits;
+                }else {
+                    MaxMise = 3;
+                }
+                printf("\nVeuiller entrer la mise (1 - %d) 0 pour encaisser : ", MaxMise);
+                Mise = -1;
+                while ((Mise < 0) || (Mise > MaxMise)){ // Saisie sécurisé
+                    while (scanf("%d", &Mise) == 0){
+                        clearInputBuffer();
+                    }
+                }
+                if (Mise != 0){
+                    Credits -= Mise;
+                }else{
+                    exit(0); // L'utilisateur a choisi de repartir avec ses crédits
+                }
+                if (Credits < 0){ // On évité de passer dans les négatifs
+                    Credits = 0;
+                }
 
-            //strcpy(Slots, "LOL");
-            Gains = 0;
-            for (int i = 0; i < WIN; i++){ // Recherche d'une combinaison gagnante et calcul des gains
-                if (strcmp(Slots, WinTable[i]) == 0){
-                    Gains = WinRewards[i] * Mise;
+                // SlotMachine Logic
+                tirage(&Gains, Mise, Slots, TabDeck, SlotIndex, WinTable, WinRewards); // tirage des combinaisons
+                Credits += Gains;
+            }
+        } else { // if in GUI MODE
+
+            // Gestion des événements
+            while(SDL_PollEvent(&event)){ // Tant qu'il y a des événements a traiter
+                switch (event.type)
+                {
+                case SDL_QUIT: // Si la fenètre reçois l'ordre de quitter (croix rouge, ctrl+c)
+                    goto Shutdown; // On éteins proprement la sdl puis le programme
+                    break;
+                case SDL_MOUSEMOTION: // Capture des mouvements de la souris
+                    MousePosition.x = event.motion.x;
+                    MousePosition.y = event.motion.y;
+                    break;
+                case SDL_MOUSEBUTTONDOWN:
+                    // On check si l'utilisateur a appuyé sur un des boutons
+                    if (SDL_PointInRect(&MousePosition, &BJouer)){
+                        if ((Credits >= Mise) && ((Mise > 0) || (LastMise != 0))){
+                            if (Mise == 0){
+                                Credits -= LastMise;
+                            }else{
+                                LastMise = Mise;
+                            }
+                            Mise = 0;
+                            tirage(&Gains, Mise, Slots, TabDeck, SlotIndex, WinTable, WinRewards); // tirage des combinaisons
+                            Credits += Gains;
+                        }
+                    }else if (SDL_PointInRect(&MousePosition, &BMiser1)){
+                        if ((Mise < 3) && (Mise < Credits)){
+                            Mise++;
+                            Credits--;
+                        }
+                    }else if (SDL_PointInRect(&MousePosition, &BMiserMax)){
+                        if (Credits < 3){
+                            Mise = Credits;
+                            Credits = 0;
+                        }else{
+                            Mise = 3;
+                            Credits -= 3;
+                        }
+                    }
+                    break;
+                default:
+                    break;
                 }
             }
-            Credits += Gains;
-        }
 
-        if (GUI){
             // Affichage des éléments (Back to Front)
             SDL_RenderCopy(Renderer, Faceplate, NULL, &Faceplate_DIM); // Affichage faceplate
             SDL_RenderCopy(Renderer, Digits[Mise], NULL, &(SDL_Rect){Faceplate_DIM.x + 471, Faceplate_DIM.y + 30, 23, 32}); // Affichage de la mise
@@ -235,9 +292,9 @@ int main(int argc, char *argv[]){
             drawNB(Renderer, Digits, NULL, &(SDL_Rect){Faceplate_DIM.x + 263, Faceplate_DIM.y + 30, 23, 32}, (Vector2i){27, 0}, 4, Credits); // Affichage du nombre de crédits
 
             // On décompose les rect affin d'avoir un plus grand control sur leurs valeurs
-            SDL_RenderCopy(Renderer, Buttons, &(SDL_Rect){Buttons_DIM.w * 0, Buttons_DIM.h * 1, Buttons_DIM.w, Buttons_DIM.h}, &(SDL_Rect){Faceplate_DIM.x + 135, Faceplate_DIM.y + 90, Buttons_DIM.w / 2, Buttons_DIM.h / 2}); // Miser 1
-            SDL_RenderCopy(Renderer, Buttons, &(SDL_Rect){Buttons_DIM.w * 1, Buttons_DIM.h * 1, Buttons_DIM.w, Buttons_DIM.h}, &(SDL_Rect){Faceplate_DIM.x + 275, Faceplate_DIM.y + 90, Buttons_DIM.w / 2, Buttons_DIM.h / 2}); // Miser Max
-            SDL_RenderCopy(Renderer, Buttons, &(SDL_Rect){Buttons_DIM.w * 2, Buttons_DIM.h * 1, Buttons_DIM.w, Buttons_DIM.h}, &(SDL_Rect){Faceplate_DIM.x + 450, Faceplate_DIM.y + 90, Buttons_DIM.w / 2, Buttons_DIM.h / 2}); // Jouer
+            SDL_RenderCopy(Renderer, Buttons, &(SDL_Rect){Buttons_DIM.w * 0, Buttons_DIM.h * 1, Buttons_DIM.w, Buttons_DIM.h}, &BMiser1); // Miser 1
+            SDL_RenderCopy(Renderer, Buttons, &(SDL_Rect){Buttons_DIM.w * 1, Buttons_DIM.h * 1, Buttons_DIM.w, Buttons_DIM.h}, &BMiserMax); // Miser Max
+            SDL_RenderCopy(Renderer, Buttons, &(SDL_Rect){Buttons_DIM.w * 2, Buttons_DIM.h * 1, Buttons_DIM.w, Buttons_DIM.h}, &BJouer); // Jouer
 
             // On affiche les slots
             animateSlots(&Reel1, ReelOffset.y, ReelOffset.x, SlotIndex[0]);
