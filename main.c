@@ -68,6 +68,11 @@ void drawNB(SDL_Renderer* renderer, SDL_Texture* digitTabTexture[], SDL_Rect* sr
     }
 }
 
+// Will animates the slots smoothly
+void animateSlots(SDL_Rect * coordinates,int originOffset, int stepOffset, int newID){
+    (*coordinates).y = stepOffset * newID + originOffset;
+}
+
 int main(int argc, char *argv[]){
     // Déclaration des variables principales
     int Gains = 0, Credits = 0, Mise = 0, MaxMise = 3, BankIN = 0;
@@ -89,11 +94,14 @@ int main(int argc, char *argv[]){
     SDL_Window* MainWindow; // Fenêtre principale
     SDL_Renderer* Renderer; // Structure nous permettant de dessinner dans la fenêtre
 
-    SDL_Texture* Faceplate;
+    SDL_Texture* Faceplate; // Le dash
     SDL_Texture* Digits[10]; // tableau contenant les numéro
     SDL_Texture* Buttons; // Les différents boutons et leurs états
+    SDL_Texture* Reel; // Les rouleaux de cartes / slots
 
     SDL_Rect Faceplate_DIM = {0}, Digits_DIM = {0}, Buttons_DIM = {0};
+    SDL_Rect Reel1 = {0}, Reel2 = {0}, Reel3 = {0}; // Coordonées pour les 3 slots
+    Vector2i ReelOffset; ReelOffset.y = 340; ReelOffset.x = 448;
 
     // Gestion des arguments
     if (argc > 1){ // Si il y a des arguments
@@ -139,6 +147,10 @@ int main(int argc, char *argv[]){
         Buttons = loadImage(ImagePath"buttons.bmp", Renderer);
         Buttons_DIM.w = 175; Buttons_DIM.h = 125; // Vu que la texture contient tout les boutons on renseignes leur tailles manuellement
 
+        Reel = loadImage(ImagePath"reel.bmp", Renderer);
+        SDL_QueryTexture(Reel, NULL, NULL, &Reel1.w, NULL); // On récupère seulement l'épaisseur de la texture
+        Reel3.h = Reel3.w = Reel2.h = Reel2.w = Reel1.h = Reel1.w; // On définit les dimensions des trois rouleaux
+        Reel3.y = Reel2.y = Reel1.y = ReelOffset.y; // On déffini la position par défaut (offset) des rouleaux
     }
 
     if ((SlotFont = fopen(FontPath, "r")) == NULL){
@@ -216,7 +228,7 @@ int main(int argc, char *argv[]){
         }
 
         if (GUI){
-            // Affichage des élémentes (Back to Front)
+            // Affichage des éléments (Back to Front)
             SDL_RenderCopy(Renderer, Faceplate, NULL, &Faceplate_DIM); // Affichage faceplate
             SDL_RenderCopy(Renderer, Digits[Mise], NULL, &(SDL_Rect){Faceplate_DIM.x + 471, Faceplate_DIM.y + 30, 23, 32}); // Affichage de la mise
             drawNB(Renderer, Digits, NULL, &(SDL_Rect){Faceplate_DIM.x + 120, Faceplate_DIM.y + 30, 23, 32}, (Vector2i){27, 0}, 4, Gains); // Affichage des gains
@@ -227,7 +239,15 @@ int main(int argc, char *argv[]){
             SDL_RenderCopy(Renderer, Buttons, &(SDL_Rect){Buttons_DIM.w * 1, Buttons_DIM.h * 1, Buttons_DIM.w, Buttons_DIM.h}, &(SDL_Rect){Faceplate_DIM.x + 275, Faceplate_DIM.y + 90, Buttons_DIM.w / 2, Buttons_DIM.h / 2}); // Miser Max
             SDL_RenderCopy(Renderer, Buttons, &(SDL_Rect){Buttons_DIM.w * 2, Buttons_DIM.h * 1, Buttons_DIM.w, Buttons_DIM.h}, &(SDL_Rect){Faceplate_DIM.x + 450, Faceplate_DIM.y + 90, Buttons_DIM.w / 2, Buttons_DIM.h / 2}); // Jouer
 
-            SDL_RenderPresent(Renderer);
+            // On affiche les slots
+            animateSlots(&Reel1, ReelOffset.y, ReelOffset.x, SlotIndex[0]);
+            animateSlots(&Reel2, ReelOffset.y, ReelOffset.x, SlotIndex[1]);
+            animateSlots(&Reel3, ReelOffset.y, ReelOffset.x, SlotIndex[2]);
+            SDL_RenderCopy(Renderer, Reel, &Reel1, &(SDL_Rect){(SCREEN_X / 4) - (Reel1.w / 8), 70, Reel1.w / 4, Reel1.h / 4});
+            SDL_RenderCopy(Renderer, Reel, &Reel2, &(SDL_Rect){(SCREEN_X / 4) * 2 - (Reel2.w / 8), 70, Reel2.w / 4, Reel2.h / 4});
+            SDL_RenderCopy(Renderer, Reel, &Reel3, &(SDL_Rect){(SCREEN_X / 4) * 3 - (Reel3.w / 8), 70, Reel3.w / 4, Reel3.h / 4});
+
+            SDL_RenderPresent(Renderer); // on termine le rendu et l'affiche a l'écran
         }
     }
 
