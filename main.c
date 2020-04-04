@@ -1,8 +1,8 @@
 #include "include.h"
 #include <SDL2/SDL.h> // Main sdl Header
 
-#define NBL 6
-#define WIN 14
+#define NBL 7
+#define WIN 12
 
 void clearInputBuffer (void) { // Clear stdin
     while ((getchar()) != '\n');
@@ -16,6 +16,16 @@ void SetConsoleSize(int Height, int Width){
 // Place le curseur au coordonées (y, x)
 void SetCursorAt(int y, int x){
     printf("\033[%d;%dH", y, x);
+}
+
+// fonctionne de la même façon que strcmp mais avec des int
+int intcmp(int tab1[], int tab2[], int arraySize){
+    for (int i = 0; i < arraySize; i++){
+        if (tab1[i] != tab2[i]){
+            return 0;
+        }
+    }
+    return 1;
 }
 
 void LoadTabFromFile(int TabY, int TabX, char CardIndex[TabY][TabX], FILE* FileStream){ // Charge un fichier dans un tableau char**
@@ -73,32 +83,61 @@ void animateSlots(SDL_Rect * coordinates,int originOffset, int stepOffset, int n
     (*coordinates).y = stepOffset * newID + originOffset;
 }
 
-void tirage(int * Gains, int Mise, char Slots[], char TabDeck[], int SlotIndex[], char WinTable[][4], int WinRewards[]){
+void tirage(int * Gains, int Mise, char TabDeck[], int SlotIndex[], int WinRewards[]){
     // Génération aléatoire des slots (tirage)
     for (int i = 0; i < 3; i++){
         SlotIndex[i] = rand()%NBL; // int
-        Slots[i] = TabDeck[SlotIndex[i]]; // char
     }
 
-        
+    // Recherche de la valeur du gain
     *Gains = 0;
-    for (int i = 0; i < WIN; i++){ // Recherche d'une combinaison gagnante et calcul des gains
-        if (strcmp(Slots, WinTable[i]) == 0){
-            *Gains = WinRewards[i] * Mise;
-        }
+    // "Any color" combination
+    if (((SlotIndex[0] == 2) || (SlotIndex[0] == 5) || (SlotIndex[0] == 1)) && ((SlotIndex[1] == 2) || (SlotIndex[1] == 5) || (SlotIndex[1] == 1)) && ((SlotIndex[2] == 2) || (SlotIndex[2] == 5) || (SlotIndex[2] == 1))){ // Any blue
+        *Gains = WinRewards[1] * Mise; //printf("Nya 0\n");
+    } else if (((SlotIndex[0] == 0) || (SlotIndex[0] == 1) || (SlotIndex[0] == 4)) && ((SlotIndex[1] == 0) || (SlotIndex[1] == 1) || (SlotIndex[1] == 4)) && ((SlotIndex[2] == 0) || (SlotIndex[2] == 1) || (SlotIndex[2] == 4))){ // Any red
+        *Gains = WinRewards[1] * Mise; //printf("Nya 1\n");
+    } else if (((SlotIndex[0] == 1) || (SlotIndex[0] == 3) || (SlotIndex[0] == 6)) && ((SlotIndex[1] == 1) || (SlotIndex[1] == 3) || (SlotIndex[1] == 6)) && ((SlotIndex[2] == 1) || (SlotIndex[2] == 3) || (SlotIndex[2] == 6))){ // Any white
+        *Gains = WinRewards[1] * Mise; //printf("Nya 2\n");
     }
+    
+    // Half specific combination
+    if (((SlotIndex[0] == 0) || (SlotIndex[0] == 3) || (SlotIndex[0] == 5)) && ((SlotIndex[1] == 0) || (SlotIndex[1] == 3) || (SlotIndex[1] == 5)) && ((SlotIndex[2] == 0) || (SlotIndex[2] == 3) || (SlotIndex[2] == 5))){ // Any mixed sevens
+        *Gains = WinRewards[6] * Mise; //printf("Nya 3\n");
+    } else if (((SlotIndex[0] == 0) || (SlotIndex[0] == 1) || (SlotIndex[0] == 4)) && ((SlotIndex[1] == 1) || (SlotIndex[1] == 3) || (SlotIndex[1] == 6)) && ((SlotIndex[2] == 2) || (SlotIndex[2] == 5) || (SlotIndex[2] == 1))){ // Any red, Any White, Any Blue
+        *Gains = WinRewards[4] * Mise; //printf("Nya 4\n");
+    } else if (((SlotIndex[0] == 2) || (SlotIndex[0] == 4) || (SlotIndex[0] == 6)) && ((SlotIndex[1] == 2) || (SlotIndex[1] == 4) || (SlotIndex[1] == 6)) && ((SlotIndex[2] == 2) || (SlotIndex[2] == 4) || (SlotIndex[2] == 6))){ // Any bar
+        *Gains = WinRewards[2] * Mise; //printf("Nya 5\n");
+    }
+
+    // Specific combinaition
+    if (intcmp(SlotIndex, (int[3]){4, 4, 4}, 3)){ // Full red bar
+        *Gains = WinRewards[3] * Mise; //printf("Nya 6\n");
+    } else if (intcmp(SlotIndex, (int[3]){6, 6, 6}, 3)){ // Full white bar
+        *Gains = WinRewards[4] * Mise; //printf("Nya 7\n");
+    } else if (intcmp(SlotIndex, (int[3]){2, 2, 2}, 3)){ // Full blue bar
+        *Gains = WinRewards[5] * Mise; //printf("Nya 8\n");
+    } else if (intcmp(SlotIndex, (int[3]){5, 5, 5}, 3)){ // Full blue sevens
+        *Gains = WinRewards[7] * Mise; //printf("Nya 9\n");
+    } else if (intcmp(SlotIndex, (int[3]){3, 3, 3}, 3)){ // Full white sevens
+        *Gains = WinRewards[8] * Mise; //printf("Nya 10\n");
+    } else if (intcmp(SlotIndex, (int[3]){0, 0, 0}, 3)){ // Full red sevens{
+        *Gains = WinRewards[9] * Mise; //printf("Nya 11\n");
+    } else if (intcmp(SlotIndex, (int[3]){0, 3, 5}, 3)){ // Red white blue seven
+        *Gains = WinRewards[10] * Mise; //printf("Nya 12\n");
+    } else if (intcmp(SlotIndex, (int[3]){1, 1, 1}, 3)){ // Wild x3
+        *Gains = WinRewards[11] * Mise; //printf("Nya 13\n");
+    }
+
+    //printf("Gains %d | Mise %d \n", *Gains, Mise);
 }
 
 int main(int argc, char *argv[]){
     // Déclaration des variables principales
-    int Gains = 0, Credits = 500, Mise = 0, MaxMise = 3, BankIN = 0, LastMise = 0;
+    int Gains = 0, Credits = 50, Mise = 0, MaxMise = 3, BankIN = 0, LastMise = 0;
     char GUI = 0, ReturnStatus = 0; // Booléen de sélection (char car il n'a besoin que d'etre 0 ou 1)
 
-    char TabDeck[NBL] = "BELNOS"; // 0 -> 5 Les lettres qui peuvent tomber
-    //char WinTable[WIN][4] = {"BON", "BEL", "BOL", "SOL", "SEL", "LES", "OSS", "BEN", "SEE", "NEO", "NOS", "LOL", "SON", "ONE"}; // Les combinaison gagnantes
-    char WinTable[WIN][4] = {"EEE", "BNS", "BBB", "NNN", "SSS", "BSN", "SBN", "SNB", "NBS", "NSB", "LLL", "LOL", "SON", "ONE"}; // Les combinaison gagnantes
-    int WinRewards[WIN] = {4000, 400, 300, 200, 100, 50, 50, 50, 50, 50, 40, 30, 25, 1}; // Les gains associés
-    char Slots[4] = "LOL"; // La combinaison par défaut
+    char TabDeck[NBL] = "BELNOSI"; // 0 -> 5 Les lettres qui peuvent tomber
+    int WinRewards[WIN] = {1, 2, 5, 10, 20, 40, 50, 100, 200, 300, 400, 4000}; // Les gains associés
     int SlotIndex[3] = {2, 4, 2}; // Index de la combinaison par défaut
 
     FILE* SlotFont = NULL; // Notre fichier contenant les "Polices" a blit dans la console
@@ -236,7 +275,7 @@ int main(int argc, char *argv[]){
                 }
 
                 // SlotMachine Logic
-                tirage(&Gains, Mise, Slots, TabDeck, SlotIndex, WinTable, WinRewards); // tirage des combinaisons
+                tirage(&Gains, Mise, TabDeck, SlotIndex, WinRewards); // tirage des combinaisons
                 Credits += Gains;
             }
         } else { // if in GUI MODE
@@ -255,14 +294,15 @@ int main(int argc, char *argv[]){
                 case SDL_MOUSEBUTTONDOWN:
                     // On check si l'utilisateur a appuyé sur un des boutons
                     if (SDL_PointInRect(&MousePosition, &BJouer)){
-                        if ((Credits >= Mise) && ((Mise > 0) || (LastMise != 0))){
+                        if (((Credits >= Mise) && (Credits >= LastMise)) && ((Mise > 0) || (LastMise > 0))){
                             if (Mise == 0){
                                 Credits -= LastMise;
+                                Mise = LastMise;
                             }else{
                                 LastMise = Mise;
                             }
+                            tirage(&Gains, Mise, TabDeck, SlotIndex, WinRewards); // tirage des combinaisons
                             Mise = 0;
-                            tirage(&Gains, Mise, Slots, TabDeck, SlotIndex, WinTable, WinRewards); // tirage des combinaisons
                             Credits += Gains;
                         }
                     }else if (SDL_PointInRect(&MousePosition, &BMiser1)){
