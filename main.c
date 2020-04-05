@@ -133,8 +133,8 @@ void tirage(int * Gains, int Mise, char TabDeck[], int SlotIndex[], int WinRewar
 
 int main(int argc, char *argv[]){
     // Déclaration des variables principales
-    int Gains = 0, Credits = 50, Mise = 0, MaxMise = 3, BankIN = 0, LastMise = 0;
-    char GUI = 0, ReturnStatus = 0; // Booléen de sélection (char car il n'a besoin que d'etre 0 ou 1)
+    int Gains = 0, Credits = 0, Mise = 0, MaxMise = 3, BankIN = 0, LastMise = 0;
+    char GUI = 0, ReturnStatus = 0, TextInput = 1; // Booléen de sélection (char car il n'a besoin que d'etre 0 ou 1)
 
     char TabDeck[NBL] = "BELNOSI"; // 0 -> 5 Les lettres qui peuvent tomber
     int WinRewards[WIN] = {1, 2, 5, 10, 20, 40, 50, 100, 200, 300, 400, 4000}; // Les gains associés
@@ -145,6 +145,10 @@ int main(int argc, char *argv[]){
     int CardSize = 0;
 
     srand(time NULL); // Pour que rand() soit plus dificilement prédictible
+
+    unsigned int time = 0, oldTime = 0; // contient la valeur du temps courant et de la frame d'avant
+    char creditBlink = 0; // Booléen indiquant si le compteur des crédits clignote ou pas (saisie des crédits au clavier en mode gui)
+    int creditBlinkTimer = 0, creditBlinkDelay = 500; // En milisecondes
 
     // Déclaration liée a la SDL
     SDL_Window* MainWindow; // Fenêtre principale
@@ -214,6 +218,7 @@ int main(int argc, char *argv[]){
         SDL_QueryTexture(Reel, NULL, NULL, &Reel1.w, NULL); // On récupère seulement l'épaisseur de la texture
         Reel3.h = Reel3.w = Reel2.h = Reel2.w = Reel1.h = Reel1.w; // On définit les dimensions des trois rouleaux
         Reel3.y = Reel2.y = Reel1.y = ReelOffset.y; // On déffini la position par défaut (offset) des rouleaux
+        SDL_StartTextInput(); // On active l'entré texte par défaut car la machine a sou ne contient pas de crédits au démarrage
     }
 
     if ((SlotFont = fopen(FontPath, "r")) == NULL){
@@ -279,7 +284,26 @@ int main(int argc, char *argv[]){
                 Credits += Gains;
             }
         } else { // if in GUI MODE
+            
+            // Permet de savoir depuis combien de temps le program s'execute ainsi que le /\ d'une frame
+            oldTime = time;
+            time = SDL_GetTicks();
 
+            // Fait clignoter les crédits pendant la saisie
+            if (TextInput){
+                // Logique du clignotement des crédits en mode saisie
+                creditBlinkTimer += time - oldTime;
+                if (creditBlinkTimer > creditBlinkDelay){
+                    if(creditBlink){
+                        creditBlink = 0;
+                    }else{
+                        creditBlink = 1;
+                    }
+                    creditBlinkTimer = 0;
+                }
+            }
+
+            
             // Gestion des événements
             while(SDL_PollEvent(&event)){ // Tant qu'il y a des événements a traiter
                 switch (event.type)
@@ -292,32 +316,61 @@ int main(int argc, char *argv[]){
                     MousePosition.y = event.motion.y;
                     break;
                 case SDL_MOUSEBUTTONDOWN:
-                    // On check si l'utilisateur a appuyé sur un des boutons
-                    if (SDL_PointInRect(&MousePosition, &BJouer)){
-                        if (((Credits >= Mise) && (Credits >= LastMise)) && ((Mise > 0) || (LastMise > 0))){
-                            if (Mise == 0){
-                                Credits -= LastMise;
-                                Mise = LastMise;
-                            }else{
-                                LastMise = Mise;
+                    if (!TextInput){
+                        // On check si l'utilisateur a appuyé sur un des boutons
+                        if (SDL_PointInRect(&MousePosition, &BJouer)){
+                            if (((Mise > 0) || (LastMise > 0))){
+                                if ((Mise == 0) && (Credits >= LastMise)){
+                                    Credits -= LastMise;
+                                    Mise = LastMise;
+                                }else{
+                                    LastMise = Mise;
+                                }
+                                tirage(&Gains, Mise, TabDeck, SlotIndex, WinRewards); // tirage des combinaisons
+                                Mise = 0;
+                                Credits += Gains;
                             }
-                            tirage(&Gains, Mise, TabDeck, SlotIndex, WinRewards); // tirage des combinaisons
-                            Mise = 0;
-                            Credits += Gains;
+                            if (Credits == 0){
+                                TextInput = 1;
+                                SDL_StartTextInput();
+                            }
+                        }else if (SDL_PointInRect(&MousePosition, &BMiser1)){
+                            if ((Mise < 3) && (Mise < Credits)){
+                                Mise++;
+                                Credits--;
+                            }
+                        }else if (SDL_PointInRect(&MousePosition, &BMiserMax)){
+                            if ((Credits < 3) && (Credits > 0)){
+                                Mise = Credits;
+                                Credits = 0;
+                            }else if (Mise != 3){
+                                Credits -= 3 - Mise;
+                                Mise = 3;
+                            }
                         }
-                    }else if (SDL_PointInRect(&MousePosition, &BMiser1)){
-                        if ((Mise < 3) && (Mise < Credits)){
-                            Mise++;
-                            Credits--;
-                        }
-                    }else if (SDL_PointInRect(&MousePosition, &BMiserMax)){
-                        if (Credits < 3){
-                            Mise = Credits;
-                            Credits = 0;
-                        }else{
-                            Mise = 3;
-                            Credits -= 3;
-                        }
+                    }
+                    break;
+                case SDL_KEYDOWN:
+                    if ((event.key.keysym.scancode == SDL_SCANCODE_RETURN) || (event.key.keysym.scancode == SDL_SCANCODE_RETURN2)){
+                        TextInput = 0;
+                        creditBlink = 0;
+                        SDL_StopTextInput();
+                    } 
+                    switch (event.key.keysym.scancode)
+                    {
+                    case SDL_SCANCODE_ESCAPE: // The bankrupt key
+                        Credits = 0;
+                        TextInput = 1;
+                        SDL_StartTextInput();
+                        break;            
+                    default:
+                        break;
+                    }
+                    break;
+                case SDL_TEXTINPUT:             
+                    if ((event.text.text[0] >= '0') && (event.text.text[0] <= '9')){
+                        Credits *= 10;
+                        Credits += (event.text.text[0] - 48);
                     }
                     break;
                 default:
@@ -329,8 +382,9 @@ int main(int argc, char *argv[]){
             SDL_RenderCopy(Renderer, Faceplate, NULL, &Faceplate_DIM); // Affichage faceplate
             SDL_RenderCopy(Renderer, Digits[Mise], NULL, &(SDL_Rect){Faceplate_DIM.x + 471, Faceplate_DIM.y + 30, 23, 32}); // Affichage de la mise
             drawNB(Renderer, Digits, NULL, &(SDL_Rect){Faceplate_DIM.x + 120, Faceplate_DIM.y + 30, 23, 32}, (Vector2i){27, 0}, 4, Gains); // Affichage des gains
-            drawNB(Renderer, Digits, NULL, &(SDL_Rect){Faceplate_DIM.x + 263, Faceplate_DIM.y + 30, 23, 32}, (Vector2i){27, 0}, 4, Credits); // Affichage du nombre de crédits
-
+            if (!creditBlink){
+                drawNB(Renderer, Digits, NULL, &(SDL_Rect){Faceplate_DIM.x + 263, Faceplate_DIM.y + 30, 23, 32}, (Vector2i){27, 0}, 4, Credits); // Affichage du nombre de crédits
+            }
             // On décompose les rect affin d'avoir un plus grand control sur leurs valeurs
             SDL_RenderCopy(Renderer, Buttons, &(SDL_Rect){Buttons_DIM.w * 0, Buttons_DIM.h * 1, Buttons_DIM.w, Buttons_DIM.h}, &BMiser1); // Miser 1
             SDL_RenderCopy(Renderer, Buttons, &(SDL_Rect){Buttons_DIM.w * 1, Buttons_DIM.h * 1, Buttons_DIM.w, Buttons_DIM.h}, &BMiserMax); // Miser Max
