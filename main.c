@@ -2,7 +2,7 @@
 #include <SDL2/SDL.h> // Main sdl Header
 
 #define NBL 7
-#define WIN 12
+#define WIN 13
 
 void clearInputBuffer (void) { // Clear stdin
     while ((getchar()) != '\n');
@@ -125,7 +125,11 @@ void tirage(int * Gains, int Mise, char TabDeck[], int SlotIndex[], int WinRewar
     } else if (intcmp(SlotIndex, (int[3]){0, 3, 5}, 3)){ // Red white blue seven
         *Gains = WinRewards[10] * Mise; //printf("Nya 12\n");
     } else if (intcmp(SlotIndex, (int[3]){1, 1, 1}, 3)){ // Wild x3
-        *Gains = WinRewards[11] * Mise; //printf("Nya 13\n");
+        if (Mise < 3){
+            *Gains = WinRewards[11] * Mise; //printf("Nya 13\n");
+        }else{
+            *Gains = WinRewards[12];
+        }
     }
 
     //printf("Gains %d | Mise %d \n", *Gains, Mise);
@@ -137,7 +141,7 @@ int main(int argc, char *argv[]){
     char GUI = 0, ReturnStatus = 0, TextInput = 1; // Booléen de sélection (char car il n'a besoin que d'etre 0 ou 1)
 
     char TabDeck[NBL] = "BELNOSI"; // 0 -> 5 Les lettres qui peuvent tomber
-    int WinRewards[WIN] = {1, 2, 5, 10, 20, 40, 50, 100, 200, 300, 400, 4000}; // Les gains associés
+    int WinRewards[WIN] = {1, 2, 5, 10, 20, 40, 50, 100, 200, 300, 400, 4000, 20000}; // Les gains associés
     int SlotIndex[3] = {2, 4, 2}; // Index de la combinaison par défaut
 
     FILE* SlotFont = NULL; // Notre fichier contenant les "Polices" a blit dans la console
@@ -158,10 +162,13 @@ int main(int argc, char *argv[]){
     SDL_Texture* Digits[10]; // tableau contenant les numéro
     SDL_Texture* Buttons; // Les différents boutons et leurs états
     SDL_Texture* Reel; // Les rouleaux de cartes / slots
+    SDL_Texture* Shadow; // Ombre projeté sur les slots
 
     SDL_Rect Faceplate_DIM = {0}, Digits_DIM = {0}, Buttons_DIM = {0}, BMiser1 = {0}, BMiserMax = {0}, BJouer = {0};
     SDL_Rect Reel1 = {0}, Reel2 = {0}, Reel3 = {0}; // Coordonées pour les 3 slots
-    Vector2i ReelOffset; ReelOffset.y = 340; ReelOffset.x = 448;
+    //Vector2i ReelOffset; ReelOffset.y = 340; ReelOffset.x = 448;
+    Vector2i ReelOffset; ReelOffset.y = 210; ReelOffset.x = 448;
+    //      Position par défaut (Démarage) / Offset case a case
 
     SDL_Event event; // Structure contenant tous les événements relatif a la fenêtre (souris clavier menus etc)
     SDL_Point MousePosition;
@@ -216,8 +223,12 @@ int main(int argc, char *argv[]){
 
         Reel = loadImage(ImagePath"reel.bmp", Renderer);
         SDL_QueryTexture(Reel, NULL, NULL, &Reel1.w, NULL); // On récupère seulement l'épaisseur de la texture
-        Reel3.h = Reel3.w = Reel2.h = Reel2.w = Reel1.h = Reel1.w; // On définit les dimensions des trois rouleaux
+        Reel3.w = Reel2.w = Reel1.w; // On définit les dimensions des trois rouleaux
+        Reel3.h = Reel2.h = Reel1.h = Reel1.w * 1.5f;
         Reel3.y = Reel2.y = Reel1.y = ReelOffset.y; // On déffini la position par défaut (offset) des rouleaux
+
+        Shadow = loadImage(ImagePath"shadow.bmp", Renderer);
+
         SDL_StartTextInput(); // On active l'entré texte par défaut car la machine a sou ne contient pas de crédits au démarrage
     }
 
@@ -362,7 +373,10 @@ int main(int argc, char *argv[]){
                         Credits = 0;
                         TextInput = 1;
                         SDL_StartTextInput();
-                        break;            
+                        break;
+                    case SDL_SCANCODE_BACKSPACE:
+                        Credits /= 10;
+                        break;
                     default:
                         break;
                     }
@@ -394,9 +408,15 @@ int main(int argc, char *argv[]){
             animateSlots(&Reel1, ReelOffset.y, ReelOffset.x, SlotIndex[0]);
             animateSlots(&Reel2, ReelOffset.y, ReelOffset.x, SlotIndex[1]);
             animateSlots(&Reel3, ReelOffset.y, ReelOffset.x, SlotIndex[2]);
-            SDL_RenderCopy(Renderer, Reel, &Reel1, &(SDL_Rect){(SCREEN_X / 4) - (Reel1.w / 8), 70, Reel1.w / 4, Reel1.h / 4});
-            SDL_RenderCopy(Renderer, Reel, &Reel2, &(SDL_Rect){(SCREEN_X / 4) * 2 - (Reel2.w / 8), 70, Reel2.w / 4, Reel2.h / 4});
-            SDL_RenderCopy(Renderer, Reel, &Reel3, &(SDL_Rect){(SCREEN_X / 4) * 3 - (Reel3.w / 8), 70, Reel3.w / 4, Reel3.h / 4});
+
+            SDL_RenderCopy(Renderer, Reel, &Reel1, &(SDL_Rect){(SCREEN_X / 4) - (Reel1.w / 8), 50, Reel1.w / 4, Reel1.h / 4});
+            SDL_RenderCopy(Renderer, Shadow, NULL, &(SDL_Rect){(SCREEN_X / 4) - (Reel1.w / 8), 50, Reel1.w / 4, Reel1.h / 4});
+
+            SDL_RenderCopy(Renderer, Reel, &Reel2, &(SDL_Rect){(SCREEN_X / 4) * 2 - (Reel2.w / 8), 50, Reel2.w / 4, Reel2.h / 4});
+            SDL_RenderCopy(Renderer, Shadow, NULL, &(SDL_Rect){(SCREEN_X / 4) * 2 - (Reel2.w / 8), 50, Reel2.w / 4, Reel2.h / 4});
+
+            SDL_RenderCopy(Renderer, Reel, &Reel3, &(SDL_Rect){(SCREEN_X / 4) * 3 - (Reel3.w / 8), 50, Reel3.w / 4, Reel3.h / 4});
+            SDL_RenderCopy(Renderer, Shadow, NULL, &(SDL_Rect){(SCREEN_X / 4) * 3 - (Reel3.w / 8), 50, Reel3.w / 4, Reel3.h / 4});
 
             SDL_RenderPresent(Renderer); // on termine le rendu et l'affiche a l'écran
         }
