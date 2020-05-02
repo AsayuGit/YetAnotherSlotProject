@@ -18,6 +18,15 @@ void SetCursorAt(int y, int x){
     printf("\033[%d;%dH", y, x);
 }
 
+void milliSleep(int milliseconds){
+    struct timespec TimeStructure;
+    if (milliseconds > 0){ // S'il y a un délais alors on convertis le temps d'attente en secondes et nanosecondes avant d'attendre le délais correspondant
+        TimeStructure.tv_sec = milliseconds / 1000;
+        TimeStructure.tv_nsec = (milliseconds % 10000) * 1000000;
+        nanosleep(&TimeStructure, NULL);
+    }
+}
+
 // fonctionne de la même façon que strcmp mais avec des int
 int intcmp(int tab1[], int tab2[], int arraySize){
     for (int i = 0; i < arraySize; i++){
@@ -41,10 +50,11 @@ void DisplayTab(int TabY, int TabX, char CardIndex[TabY][TabX]){ // Affiche le c
     }
 }
 
-void DisplayCardAt(int TabY, int TabX, char CardIndex[TabY][TabX], int CardID, int CardYSize, int y, int x){ // Affiche une carte a une endroid précis de l'écran
+void DisplayCardAt(int TabY, int TabX, char CardIndex[TabY][TabX], int CardID, int CardYSize, int y, int x, int Delay){ // Affiche une carte a une endroid précis de l'écran
     for (int i = 0; i < CardYSize; i++){
         SetCursorAt(y + i, x);
         printf("%s", CardIndex[(CardID * CardYSize + i)]); // récupère une ligne d'un tableau char**
+        milliSleep(Delay);
     }
 }
 
@@ -78,9 +88,32 @@ void drawNB(SDL_Renderer* renderer, SDL_Texture* digitTabTexture[], SDL_Rect* sr
     }
 }
 
-// Will animates the slots smoothly
-void animateSlots(SDL_Rect * coordinates,int originOffset, int stepOffset, int newID){
+// Snap the slots to a certain combinaison
+void snapSlots(SDL_Rect * coordinates,int originOffset, int stepOffset, int newID){
     (*coordinates).y = stepOffset * newID + originOffset;
+}
+
+// Animates the slots smoothly
+void animateSlots(SDL_Rect * coordinates,int originOffset, int stepOffset, int newID, float maxSpeed, int *Steps){  
+    (*coordinates).y += maxSpeed;
+    int loopbackLimit;
+    
+    if ((*Steps) > 0){// LoopCode
+        loopbackLimit = stepOffset * NBL + originOffset;
+        if ((*coordinates).y > loopbackLimit){
+            (*coordinates).y = (*coordinates).y - loopbackLimit + originOffset;
+            (*Steps)--;
+        }
+    }else{
+        loopbackLimit = stepOffset * newID + originOffset; // Arriver précisément au bon endroit
+        if ((*coordinates).y > loopbackLimit){
+            (*coordinates).y = stepOffset * newID + originOffset;
+            (*Steps)--;
+        }
+        //(*coordinates).y = stepOffset * newID + originOffset;
+    }
+
+    //printf("%d\n", (*coordinates).y);
 }
 
 void tirage(int * Gains, int Mise, char TabDeck[], int SlotIndex[], int WinRewards[]){
@@ -147,6 +180,10 @@ int main(int argc, char *argv[]){
     FILE* SlotFont = NULL; // Notre fichier contenant les "Polices" a blit dans la console
     Vector2i SlotSize; SlotSize.x = 0; SlotSize.y = 0;
     int CardSize = 0;
+    int TextCardDrawDelay = 0; // Contiendras le délais ligne a ligne de l'affichage d'une carte quand une combinaison est tiré
+    float ReelSpeed = 200.0f; // Contient la vitesse de rotation des rouleaux
+    int ReelStep[3] = {-2, -2, -2}; // Contient le nombre de tours a effectuer // -2 signifie pas d'animation
+    int ReelSize = 0; // Taille verticale de la texture des slots (Utilisé pour leurs animation)
 
     srand(time NULL); // Pour que rand() soit plus dificilement prédictible
 
@@ -204,6 +241,8 @@ int main(int argc, char *argv[]){
             exit(-1);
         }
 
+        SDL_GL_SetSwapInterval(1); // Turn on vsync
+
         Faceplate = loadImage(ImagePath"faceplate.bmp", Renderer);
         SDL_QueryTexture(Faceplate, NULL, NULL, &Faceplate_DIM.w, &Faceplate_DIM.h); // on récupère la taille de la texture
         Faceplate_DIM.y = SCREEN_Y - Faceplate_DIM.h; // On déplace la texture en bas de l'écran
@@ -222,10 +261,15 @@ int main(int argc, char *argv[]){
         BJouer = (SDL_Rect){Faceplate_DIM.x + 450, Faceplate_DIM.y + 90, Buttons_DIM.w / 2, Buttons_DIM.h / 2};
 
         Reel = loadImage(ImagePath"reel.bmp", Renderer);
-        SDL_QueryTexture(Reel, NULL, NULL, &Reel1.w, NULL); // On récupère seulement l'épaisseur de la texture
+        SDL_QueryTexture(Reel, NULL, NULL, &Reel1.w, &ReelSize); // On récupère seulement l'épaisseur de la texture
         Reel3.w = Reel2.w = Reel1.w; // On définit les dimensions des trois rouleaux
         Reel3.h = Reel2.h = Reel1.h = Reel1.w * 1.5f;
         Reel3.y = Reel2.y = Reel1.y = ReelOffset.y; // On déffini la position par défaut (offset) des rouleaux
+
+        // Snaps the slots into place for the default combination
+        snapSlots(&Reel1, ReelOffset.y, ReelOffset.x, SlotIndex[0]);
+        snapSlots(&Reel2, ReelOffset.y, ReelOffset.x, SlotIndex[1]);
+        snapSlots(&Reel3, ReelOffset.y, ReelOffset.x, SlotIndex[2]);
 
         Shadow = loadImage(ImagePath"shadow.bmp", Renderer);
 
@@ -252,9 +296,11 @@ int main(int argc, char *argv[]){
             system(CLEAR); // Clear the console
 
             // On Affiche les cartes du précédent tirage
-            DisplayCardAt(SlotSize.y, SlotSize.x, CardIndex, SlotIndex[0], CardSize, 2, 10); // Card 1
-            DisplayCardAt(SlotSize.y, SlotSize.x, CardIndex, SlotIndex[1], CardSize, 2, SlotSize.x + 10); // Card 2
-            DisplayCardAt(SlotSize.y, SlotSize.x, CardIndex, SlotIndex[2], CardSize, 2, 2*SlotSize.x + 10); // Card 3
+            DisplayCardAt(SlotSize.y, SlotSize.x, CardIndex, SlotIndex[0], CardSize, 2, 10, TextCardDrawDelay); // Card 1
+            DisplayCardAt(SlotSize.y, SlotSize.x, CardIndex, SlotIndex[1], CardSize, 2, SlotSize.x + 10, TextCardDrawDelay); // Card 2
+            DisplayCardAt(SlotSize.y, SlotSize.x, CardIndex, SlotIndex[2], CardSize, 2, 2*SlotSize.x + 10, TextCardDrawDelay); // Card 3
+
+            TextCardDrawDelay = 0;
 
             SetCursorAt(CardSize + 4, 25);
             printf("Gains : %d | Credits : %d | Mise : %d\n", Gains, Credits, Mise); // Header
@@ -292,6 +338,7 @@ int main(int argc, char *argv[]){
 
                 // SlotMachine Logic
                 tirage(&Gains, Mise, TabDeck, SlotIndex, WinRewards); // tirage des combinaisons
+                TextCardDrawDelay = 50; // On délais l'affichage des cartes au tirage affin d'avoir un semblant d'annimation
                 Credits += Gains;
             }
         } else { // if in GUI MODE
@@ -327,7 +374,7 @@ int main(int argc, char *argv[]){
                     MousePosition.y = event.motion.y;
                     break;
                 case SDL_MOUSEBUTTONDOWN:
-                    if (!TextInput){
+                    if (!TextInput && (ReelStep[0] == -2) && (ReelStep[1] == -2) && (ReelStep[2] == -2)){
                         // On check si l'utilisateur a appuyé sur un des boutons
                         if (SDL_PointInRect(&MousePosition, &BJouer)){
                             if (((Mise > 0) || (LastMise > 0))){
@@ -338,6 +385,7 @@ int main(int argc, char *argv[]){
                                     LastMise = Mise;
                                 }
                                 tirage(&Gains, Mise, TabDeck, SlotIndex, WinRewards); // tirage des combinaisons
+                                ReelStep[0] = 5; ReelStep[1] = 5; ReelStep[2] = 5; // On anime les rouleaux
                                 Mise = 0;
                                 Credits += Gains;
                             }
@@ -405,9 +453,15 @@ int main(int argc, char *argv[]){
             SDL_RenderCopy(Renderer, Buttons, &(SDL_Rect){Buttons_DIM.w * 2, Buttons_DIM.h * 1, Buttons_DIM.w, Buttons_DIM.h}, &BJouer); // Jouer
 
             // On affiche les slots
-            animateSlots(&Reel1, ReelOffset.y, ReelOffset.x, SlotIndex[0]);
-            animateSlots(&Reel2, ReelOffset.y, ReelOffset.x, SlotIndex[1]);
-            animateSlots(&Reel3, ReelOffset.y, ReelOffset.x, SlotIndex[2]);
+            if (ReelStep[0] > -2){
+                animateSlots(&Reel1, ReelOffset.y, ReelOffset.x, SlotIndex[0], ReelSpeed, &ReelStep[0]);
+            }
+            if (ReelStep[1] > -2){
+                animateSlots(&Reel2, ReelOffset.y, ReelOffset.x, SlotIndex[1], ReelSpeed, &ReelStep[1]);
+            }
+            if (ReelStep[2] > -2){
+                animateSlots(&Reel3, ReelOffset.y, ReelOffset.x, SlotIndex[2], ReelSpeed, &ReelStep[2]);
+            }
 
             SDL_RenderCopy(Renderer, Reel, &Reel1, &(SDL_Rect){(SCREEN_X / 4) - (Reel1.w / 8), 50, Reel1.w / 4, Reel1.h / 4});
             SDL_RenderCopy(Renderer, Shadow, NULL, &(SDL_Rect){(SCREEN_X / 4) - (Reel1.w / 8), 50, Reel1.w / 4, Reel1.h / 4});
