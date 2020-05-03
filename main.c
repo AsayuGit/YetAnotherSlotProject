@@ -1,5 +1,6 @@
 #include "include.h"
 #include <SDL2/SDL.h> // Main sdl Header
+#include <SDL2/SDL_mixer.h> // Audio support
 
 #define NBL 7
 #define WIN 13
@@ -74,6 +75,25 @@ SDL_Texture* loadImage(const char path[], SDL_Renderer* renderer){
     SDL_FreeSurface(LoadingSurface); // On libère la mémoire
 
     return ReturnTexture;
+}
+
+// Ces deux fonctions peuvent sembler redondantes, mais elles permettent d'avoir a réécrire le code de gestion d'erreur
+Mix_Chunk* loadSoundEffect(const char path[]){
+    Mix_Chunk* loadingChunk = Mix_LoadWAV(path);
+    if (loadingChunk == NULL){
+        fprintf(stderr, "Erreur lors du chargement en mémoire de l'effet : %s\n%s\n", path, Mix_GetError());
+        exit(-1);
+    }
+    return loadingChunk;
+}
+
+Mix_Music* loadMusic(const char path[]){
+    Mix_Music* loadingMusic = Mix_LoadMUS(path);
+    if (loadingMusic == NULL){
+        fprintf(stderr, "Erreur lors du chargement en mémoire de la musique : %s\n%s\n", path, Mix_GetError());
+        exit(-1);
+    }
+    return loadingMusic;
 }
 
 // Affiche un nombre avec des times (Algo droite gauche :3(comme quoi ça sert))
@@ -207,6 +227,14 @@ int main(int argc, char *argv[]){
     Vector2i ReelOffset; ReelOffset.y = 210; ReelOffset.x = 448;
     //      Position par défaut (Démarage) / Offset case a case
 
+    // Sound effects
+    Mix_Chunk *coinIn = NULL;
+    Mix_Chunk *coinIn2 = NULL;
+    Mix_Chunk *coinIn3 = NULL;
+    Mix_Chunk *spin = NULL;
+    Mix_Music *backgroundMusic = NULL;
+    Mix_Music *bakInitialD = NULL;
+
     SDL_Event event; // Structure contenant tous les événements relatif a la fenêtre (souris clavier menus etc)
     SDL_Point MousePosition;
 
@@ -224,7 +252,7 @@ int main(int argc, char *argv[]){
 
     if (GUI){ // A effectuer seulement si l'utilisateur a choisi une gui
         // Initialisations liée a la SDL
-        if (SDL_Init(SDL_INIT_VIDEO) != 0){ // initialisation de la sdl + Gestion des erreurs
+        if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO) != 0){ // initialisation de la sdl + Gestion des erreurs
             fprintf(stderr, "Erreur a l'initialisation de la SDL : %s\n", SDL_GetError()); // On affiche le message d'erreur s'il y en a un
             exit(-1);
         }
@@ -242,6 +270,12 @@ int main(int argc, char *argv[]){
         }
 
         SDL_GL_SetSwapInterval(1); // Turn on vsync
+
+        // Initialisation du moteur audio en qualité CD 44100Khz, Stereo, 1kb par chunk
+        if(Mix_OpenAudio(44100, MIX_DEFAULT_FORMAT, 2, 1024) != 0){
+            fprintf(stderr, "Erreur a l'inintialisation du moteur audio : %s\n", Mix_GetError());
+            exit(-1);
+        }
 
         Faceplate = loadImage(ImagePath"faceplate.bmp", Renderer);
         SDL_QueryTexture(Faceplate, NULL, NULL, &Faceplate_DIM.w, &Faceplate_DIM.h); // on récupère la taille de la texture
@@ -272,6 +306,15 @@ int main(int argc, char *argv[]){
         snapSlots(&Reel3, ReelOffset.y, ReelOffset.x, SlotIndex[2]);
 
         Shadow = loadImage(ImagePath"shadow.bmp", Renderer);
+
+        coinIn = loadSoundEffect(SoundPath"payout1.ogg");
+        coinIn2 = loadSoundEffect(SoundPath"payout2.ogg");
+        coinIn3 = loadSoundEffect(SoundPath"payout3.ogg");
+        spin = loadSoundEffect(SoundPath"spin0.wav");
+        backgroundMusic = loadMusic(SoundPath"Halos of Eternity.ogg");
+        bakInitialD = loadMusic(SoundPath"InitialD.ogg");
+        Mix_PlayMusic(backgroundMusic, -1);
+        Mix_VolumeMusic(64);
 
         SDL_StartTextInput(); // On active l'entré texte par défaut car la machine a sou ne contient pas de crédits au démarrage
     }
@@ -374,7 +417,7 @@ int main(int argc, char *argv[]){
                     MousePosition.y = event.motion.y;
                     break;
                 case SDL_MOUSEBUTTONDOWN:
-                    if (!TextInput && (ReelStep[0] == -2) && (ReelStep[1] == -2) && (ReelStep[2] == -2)){
+                    if (!TextInput && (ReelStep[0] == -3) && (ReelStep[1] == -3) && (ReelStep[2] == -3)){
                         // On check si l'utilisateur a appuyé sur un des boutons
                         if (SDL_PointInRect(&MousePosition, &BJouer)){
                             if (((Mise > 0) || (LastMise > 0))){
@@ -385,7 +428,8 @@ int main(int argc, char *argv[]){
                                     LastMise = Mise;
                                 }
                                 tirage(&Gains, Mise, TabDeck, SlotIndex, WinRewards); // tirage des combinaisons
-                                ReelStep[0] = 5; ReelStep[1] = 5; ReelStep[2] = 5; // On anime les rouleaux
+                                ReelStep[0] = 5; ReelStep[1] = 7; ReelStep[2] = 9; // On anime les rouleaux
+                                Mix_PlayChannel(-1, spin, 0); // On joue le son du tirage -1 pour laisser la sdl choisir le channel
                                 Mise = 0;
                                 Credits += Gains;
                             }
@@ -397,13 +441,32 @@ int main(int argc, char *argv[]){
                             if ((Mise < 3) && (Mise < Credits)){
                                 Mise++;
                                 Credits--;
+                                Mix_PlayChannel(-1, coinIn, 0);
                             }
                         }else if (SDL_PointInRect(&MousePosition, &BMiserMax)){
                             if ((Credits < 3) && (Credits > 0)){
                                 Mise = Credits;
+                                if (Credits == 2){
+                                    Mix_PlayChannel(-1, coinIn2, 0);
+                                }else{
+                                    Mix_PlayChannel(-1, coinIn, 0);
+                                }
                                 Credits = 0;
                             }else if (Mise != 3){
-                                Credits -= 3 - Mise;
+                                Mise = 3 - Mise;
+                                Credits -= Mise;
+                                switch (Mise)
+                                {
+                                case 3:
+                                    Mix_PlayChannel(-1, coinIn3, 0);
+                                    break;
+                                case 2:
+                                    Mix_PlayChannel(-1, coinIn2, 0);
+                                    break;
+                                case 1:
+                                    Mix_PlayChannel(-1, coinIn, 0);
+                                    break;
+                                }
                                 Mise = 3;
                             }
                         }
@@ -463,6 +526,13 @@ int main(int argc, char *argv[]){
                 animateSlots(&Reel3, ReelOffset.y, ReelOffset.x, SlotIndex[2], ReelSpeed, &ReelStep[2]);
             }
 
+            if ((ReelStep[0] == -2) && (ReelStep[1] == -2) && (ReelStep[2] == -2)){
+                if (Mix_Playing(-1) != 0){
+                    Mix_HaltChannel(-1);
+                }
+                ReelStep[0] = ReelStep[1] = ReelStep[2] = -3;
+            }
+
             SDL_RenderCopy(Renderer, Reel, &Reel1, &(SDL_Rect){(SCREEN_X / 4) - (Reel1.w / 8), 50, Reel1.w / 4, Reel1.h / 4});
             SDL_RenderCopy(Renderer, Shadow, NULL, &(SDL_Rect){(SCREEN_X / 4) - (Reel1.w / 8), 50, Reel1.w / 4, Reel1.h / 4});
 
@@ -479,6 +549,16 @@ int main(int argc, char *argv[]){
 Shutdown:
     fclose(SlotFont);
     if (GUI){
+
+        // On libère les éffets sonores et la musique
+        Mix_FreeChunk(coinIn);
+        Mix_FreeChunk(coinIn2);
+        Mix_FreeChunk(coinIn3);
+        Mix_FreeChunk(spin);
+        Mix_FreeMusic(backgroundMusic);
+        Mix_FreeMusic(bakInitialD);
+
+        Mix_Quit(); // On quitte le moteur audio 
         SDL_DestroyRenderer(Renderer); // On détruit le renderer
         SDL_DestroyWindow(MainWindow); // On détruit la fenêtre
         SDL_Quit(); // On quitte la SDL avant de quitter notre programme

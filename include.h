@@ -25,8 +25,8 @@
 #endif
 
 #define FontPath "Fonts/SlotFont.txt"
-//#define FontPath "Fonts/Test.txt"
 #define ImagePath "Images/"
+#define SoundPath "Sounds/"
 
 typedef struct Vector2i {
     int x;
