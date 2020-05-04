@@ -190,7 +190,7 @@ void tirage(int * Gains, int Mise, char TabDeck[], int SlotIndex[], int WinRewar
 
 int main(int argc, char *argv[]){
     // Déclaration des variables principales
-    int Gains = 0, Credits = 0, Mise = 0, MaxMise = 3, BankIN = 0, LastMise = 0;
+    int Gains = 0, GuiGains = 0, Credits = 0, Mise = 0, MaxMise = 3, BankIN = 0, LastMise = 0;
     char GUI = 0, ReturnStatus = 0, TextInput = 1; // Booléen de sélection (char car il n'a besoin que d'etre 0 ou 1)
 
     char TabDeck[NBL] = "BELNOSI"; // 0 -> 5 Les lettres qui peuvent tomber
@@ -220,6 +220,7 @@ int main(int argc, char *argv[]){
     SDL_Texture* Buttons; // Les différents boutons et leurs états
     SDL_Texture* Reel; // Les rouleaux de cartes / slots
     SDL_Texture* Shadow; // Ombre projeté sur les slots
+    SDL_Texture* Sign; // Liste des combinaisons
 
     SDL_Rect Faceplate_DIM = {0}, Digits_DIM = {0}, Buttons_DIM = {0}, BMiser1 = {0}, BMiserMax = {0}, BJouer = {0};
     SDL_Rect Reel1 = {0}, Reel2 = {0}, Reel3 = {0}; // Coordonées pour les 3 slots
@@ -306,6 +307,7 @@ int main(int argc, char *argv[]){
         snapSlots(&Reel3, ReelOffset.y, ReelOffset.x, SlotIndex[2]);
 
         Shadow = loadImage(ImagePath"shadow.bmp", Renderer);
+        Sign = loadImage(ImagePath"sign.bmp", Renderer);
 
         coinIn = loadSoundEffect(SoundPath"payout1.ogg");
         coinIn2 = loadSoundEffect(SoundPath"payout2.ogg");
@@ -427,11 +429,12 @@ int main(int argc, char *argv[]){
                                 }else{
                                     LastMise = Mise;
                                 }
-                                tirage(&Gains, Mise, TabDeck, SlotIndex, WinRewards); // tirage des combinaisons
+                                tirage(&GuiGains, Mise, TabDeck, SlotIndex, WinRewards); // tirage des combinaisons
                                 ReelStep[0] = 5; ReelStep[1] = 7; ReelStep[2] = 9; // On anime les rouleaux
                                 Mix_PlayChannel(-1, spin, 0); // On joue le son du tirage -1 pour laisser la sdl choisir le channel
                                 Mise = 0;
-                                Credits += Gains;
+                                Credits += GuiGains;
+                                Gains = 0;
                             }
                             if (Credits == 0){
                                 TextInput = 1;
@@ -531,6 +534,7 @@ int main(int argc, char *argv[]){
                     Mix_HaltChannel(-1);
                 }
                 ReelStep[0] = ReelStep[1] = ReelStep[2] = -3;
+                Gains = GuiGains;
             }
 
             SDL_RenderCopy(Renderer, Reel, &Reel1, &(SDL_Rect){(SCREEN_X / 4) - (Reel1.w / 8), 50, Reel1.w / 4, Reel1.h / 4});
@@ -541,6 +545,8 @@ int main(int argc, char *argv[]){
 
             SDL_RenderCopy(Renderer, Reel, &Reel3, &(SDL_Rect){(SCREEN_X / 4) * 3 - (Reel3.w / 8), 50, Reel3.w / 4, Reel3.h / 4});
             SDL_RenderCopy(Renderer, Shadow, NULL, &(SDL_Rect){(SCREEN_X / 4) * 3 - (Reel3.w / 8), 50, Reel3.w / 4, Reel3.h / 4});
+
+            //SDL_RenderCopy(Renderer, Sign, NULL, NULL);
 
             SDL_RenderPresent(Renderer); // on termine le rendu et l'affiche a l'écran
         }
