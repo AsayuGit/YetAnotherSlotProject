@@ -97,13 +97,13 @@ Mix_Music* loadMusic(const char path[]){
 }
 
 // Affiche un nombre avec des times (Algo droite gauche :3(comme quoi ça sert))
-void drawNB(SDL_Renderer* renderer, SDL_Texture* digitTabTexture[], SDL_Rect* srcrect, SDL_Rect* dstrect, Vector2i offset, int nbOfElements, int NB){
-    (*dstrect).x += offset.x * (nbOfElements - 1);
-    (*dstrect).y += offset.y * (nbOfElements);
+void drawNB(SDL_Renderer* renderer, SDL_Texture* digitTabTexture[], SDL_Rect* srcrect, SDL_Rect dstrect, Vector2i offset, int nbOfElements, int NB){
+    dstrect.x += offset.x * (nbOfElements - 1);
+    dstrect.y += offset.y * (nbOfElements);
     for (int i = 0; i < nbOfElements; i++){
-        SDL_RenderCopy(renderer, digitTabTexture[NB % 10], srcrect, dstrect); // Affichage de la mise
-        (*dstrect).x -= offset.x;
-        (*dstrect).y -= offset.y;
+        SDL_RenderCopy(renderer, digitTabTexture[NB % 10], srcrect, &dstrect); // Affichage de la mise
+        dstrect.x -= offset.x;
+        dstrect.y -= offset.y;
         NB /= 10;
     }
 }
@@ -188,6 +188,22 @@ void tirage(int * Gains, int Mise, char TabDeck[], int SlotIndex[], int WinRewar
     //printf("Gains %d | Mise %d \n", *Gains, Mise);
 }
 
+void Scale(int *A, int *B, int C){ // Scale to a new resolution
+    // A = Old Horizontal
+    // B = Old Vertical
+    // C = New Horizontal
+    (*B) = (int)(((float)C/(float)(*A))*(float)(*B));
+    *A = C;
+}
+
+void ScalePercent(int *A, int Percent){ // Scale by X %
+    *A *= (float)(Percent / 100.f);
+}
+
+void ScaleTextureToLinkedPercent(SDL_Rect *Dimensions, int LinkedRes, float Percent){
+    Scale(&(*Dimensions).w, &(*Dimensions).h, ((LinkedRes / 100.0f) * Percent));
+}
+
 int main(int argc, char *argv[]){
     // Déclaration des variables principales
     int Gains = 0, GuiGains = 0, Credits = 0, Mise = 0, MaxMise = 3, BankIN = 0, LastMise = 0;
@@ -211,21 +227,32 @@ int main(int argc, char *argv[]){
     char creditBlink = 0; // Booléen indiquant si le compteur des crédits clignote ou pas (saisie des crédits au clavier en mode gui)
     int creditBlinkTimer = 0, creditBlinkDelay = 500; // En milisecondes
 
+    char selectedTheme = 0; // Le thème qu'utiliseras le programme : 0 = NEO (chiffres), 1 = DICE, 2 = CASINO (ExcluSDL)
+
     // Déclaration liée a la SDL
     SDL_Window* MainWindow; // Fenêtre principale
     SDL_Renderer* Renderer; // Structure nous permettant de dessinner dans la fenêtre
 
     SDL_Texture* Faceplate; // Le dash
+    SDL_Texture* NeoPlate; // --- Neo
     SDL_Texture* Digits[10]; // tableau contenant les numéro
     SDL_Texture* Buttons; // Les différents boutons et leurs états
     SDL_Texture* Reel; // Les rouleaux de cartes / slots
+    SDL_Texture* NeoReel; // --- Neo
+    SDL_Texture* casinoReel; // --- Casino
     SDL_Texture* Shadow; // Ombre projeté sur les slots
     SDL_Texture* Sign; // Liste des combinaisons
+    SDL_Texture* NeoSign; // --- Neo
+    SDL_Texture* BackGround; // L'arrière plan
+    SDL_Texture* neoBG; // Arrière plan du thème NEO
+    SDL_Texture* casinoBG; // Arrière plan du thème Casino
 
-    SDL_Rect Faceplate_DIM = {0}, Digits_DIM = {0}, Buttons_DIM = {0}, BMiser1 = {0}, BMiserMax = {0}, BJouer = {0};
-    SDL_Rect Reel1 = {0}, Reel2 = {0}, Reel3 = {0}; // Coordonées pour les 3 slots
-    //Vector2i ReelOffset; ReelOffset.y = 340; ReelOffset.x = 448;
+    SDL_Rect Faceplate_DIM = {0}, Digits_DIM = {0}, Gains_DIM = {0}, Credits_DIM = {0}, Mise_DIM = {0}, Buttons_DIM = {0}, BMiser1 = {0}, BMiserMax = {0}, BJouer = {0};
+    SDL_Rect Reel1 = {0}, Reel2 = {0}, Reel3 = {0}; // Coordonées pour les 3 slots (Dans la texture)
+    SDL_Rect Reel1_DIM = {0}, Reel2_DIM = {0}, Reel3_DIM = {0}; // Dimensions pour les 3 slots (A l'écran)
+    SDL_Rect SignDIM = {0};
     Vector2i ReelOffset; ReelOffset.y = 210; ReelOffset.x = 448;
+    Vector2i Digits_OFFSETS;
     //      Position par défaut (Démarage) / Offset case a case
 
     // Sound effects
@@ -233,8 +260,9 @@ int main(int argc, char *argv[]){
     Mix_Chunk *coinIn2 = NULL;
     Mix_Chunk *coinIn3 = NULL;
     Mix_Chunk *spin = NULL;
-    Mix_Music *backgroundMusic = NULL;
-    Mix_Music *bakInitialD = NULL;
+    Mix_Music *backgroundMusic = NULL; // Musique de fond
+    Mix_Music *neoBGM = NULL; // BGM 80s
+    Mix_Music *casinoBGM = NULL; // Classic casino BGM
 
     SDL_Event event; // Structure contenant tous les événements relatif a la fenêtre (souris clavier menus etc)
     SDL_Point MousePosition;
@@ -244,12 +272,36 @@ int main(int argc, char *argv[]){
         for (int i = 1; i < argc; i++){ // Recherche et traitement de tout les arguments (commence a 1 car l'argument #0 est le nom de l'executable)
             if (strcmp(argv[i], "-SDL") == 0){ // si l'utilisateur sélectione un gui (== 0 signifie que les deux strings n'ont aucune différence)
                 GUI = 1;
+            }else if (strcmp(argv[i], "-t") == 0){ // Theme selector
+                if (argc > i+1){ // s'il y a un argument après -t
+                    selectedTheme = atoi(argv[++i]);
+                    if (selectedTheme < 0){
+                        selectedTheme = 0;
+                    }else if (selectedTheme > NB_OF_THEMES){
+                        selectedTheme = NB_OF_THEMES;
+                    }
+                }
+            
             }else if (strcmp(argv[i], "-OSS") == 0){ // Easter egg
                 printf("D'aucuns ont des aventures je suis une aventure.\n");
                 exit(-1);
             }
         }
     }
+
+    if ((SlotFont = fopen(FontPath, "r")) == NULL){
+        fprintf(stderr, "Erreur au chargement des cartes\n");
+        exit(-1);
+    }
+    fscanf(SlotFont, "%d %d", &SlotSize.x, &SlotSize.y); fseek(SlotFont, 1, SEEK_CUR);
+    SlotSize.x += 2; // +1 \n +1 \0
+    CardSize = SlotSize.y;
+    SlotSize.y *= NBL; // on a la taille d'une carte on veut toutes les cartes
+
+    char CardIndex[SlotSize.y][SlotSize.x]; // On déclare un tableau pouvant contenir toutes les cartes
+    LoadTabFromFile(SlotSize.y, SlotSize.x, CardIndex, SlotFont); // On charge nottre fichier dans notre tableau
+
+    SetConsoleSize(LINES, COLUMNS); // On standardise la taille de la console affin d'éviter les problèmes d'affichage
 
     if (GUI){ // A effectuer seulement si l'utilisateur a choisi une gui
         // Initialisations liée a la SDL
@@ -278,62 +330,106 @@ int main(int argc, char *argv[]){
             exit(-1);
         }
 
-        Faceplate = loadImage(ImagePath"faceplate.bmp", Renderer);
-        SDL_QueryTexture(Faceplate, NULL, NULL, &Faceplate_DIM.w, &Faceplate_DIM.h); // on récupère la taille de la texture
-        Faceplate_DIM.y = SCREEN_Y - Faceplate_DIM.h; // On déplace la texture en bas de l'écran
+        neoBG = loadImage(ImagePath"NeoBackGround.bmp", Renderer);
+        casinoBG = loadImage(ImagePath"NeoBackGround.bmp", Renderer); // Temporary
+        NeoSign = loadImage(ImagePath"sign.bmp", Renderer);
+        NeoPlate = loadImage(ImagePath"NeoPlate.bmp", Renderer);
 
         for (int i = 0; i < 10; i++){
             char filename[11 + sizeof(ImagePath)]; // On aloue un buffer pour contenir le nom du fichier a charger
             sprintf(filename,ImagePath"digit%d.bmp", i);
             Digits[i] = loadImage(filename, Renderer);
-        } SDL_QueryTexture(Digits[0], NULL, NULL, &Digits_DIM.w, &Digits_DIM.h);
+        }
 
         Buttons = loadImage(ImagePath"buttons.bmp", Renderer);
+        NeoReel = loadImage(ImagePath"reelNEO.bmp", Renderer);
+        casinoReel = loadImage(ImagePath"reel.bmp", Renderer);
+        Shadow = loadImage(ImagePath"shadow.bmp", Renderer);
+
+        // Sound effects
+        coinIn = loadSoundEffect(SoundPath"payout1.ogg");
+        coinIn2 = loadSoundEffect(SoundPath"payout2.ogg");
+        coinIn3 = loadSoundEffect(SoundPath"payout3.ogg");
+        spin = loadSoundEffect(SoundPath"spin0.wav");
+
+        // Musics
+        casinoBGM = loadMusic(SoundPath"Halos of Eternity.ogg");
+        neoBGM = loadMusic(SoundPath"tokyo-rose.wav");
+themeini:
+        // Theme specific initialisation
+        switch (selectedTheme){
+            case 0: // NEO
+                BackGround = neoBG;
+                Sign = NeoSign;
+                Faceplate = NeoPlate;
+                Reel = NeoReel;
+                backgroundMusic = neoBGM;
+                break;
+            case 1: // DICE
+                BackGround = neoBG; // temporary
+                Sign = NeoSign; // temporary
+                Faceplate = NeoPlate; // temporary
+                Reel = casinoReel; // temporary
+                backgroundMusic = casinoBGM; // temporary
+                break;
+            case 2: // CASINO
+                BackGround = neoBG; // temporary
+                Sign = NeoSign; // temporary
+                Faceplate = NeoPlate; // temporary
+                Reel = casinoReel;
+                backgroundMusic = casinoBGM;
+                break;
+        }
+
+        SDL_QueryTexture(Sign, NULL, NULL, &SignDIM.w, &SignDIM.h);
+        ScaleTextureToLinkedPercent(&SignDIM, SCREEN_X, 30);
+        SignDIM.x = SCREEN_X - SignDIM.w;
+        SignDIM.y = (SCREEN_Y - SignDIM.h) / 4;
+
+        SDL_QueryTexture(Faceplate, NULL, NULL, &Faceplate_DIM.w, &Faceplate_DIM.h); // on récupère la taille de la texture
+        Scale(&Faceplate_DIM.h, &Faceplate_DIM.w, SCREEN_Y);
+
+        SDL_QueryTexture(Digits[0], NULL, NULL, &Digits_DIM.w, &Digits_DIM.h);
+        Gains_DIM = (SDL_Rect){Faceplate_DIM.x + (SCREEN_X * 0.123f), Faceplate_DIM.y + (SCREEN_Y * 0.702f), Digits_DIM.w, Digits_DIM.h};
+        Credits_DIM = (SDL_Rect){Faceplate_DIM.x + (SCREEN_X * 0.285f), Faceplate_DIM.y + (SCREEN_Y * 0.702f), Digits_DIM.w, Digits_DIM.h};
+        Mise_DIM = (SDL_Rect){Faceplate_DIM.x + (SCREEN_X * 0.565f), Faceplate_DIM.y + (SCREEN_Y * 0.702f), Digits_DIM.w, Digits_DIM.h};
+        ScaleTextureToLinkedPercent(&Gains_DIM, SCREEN_X, 2.15f);
+        ScaleTextureToLinkedPercent(&Credits_DIM, SCREEN_X, 2.15f);
+        ScaleTextureToLinkedPercent(&Mise_DIM, SCREEN_X, 2.15f);
+        Digits_OFFSETS = (Vector2i){(SCREEN_X * 0.022f), 0};
+
         Buttons_DIM.w = 175; Buttons_DIM.h = 125; // Vu que la texture contient tout les boutons on renseignes leur tailles manuellement
         // On initialise la position (et par conséquant leurs hitboxes) des différents boutons de l'interface
-        BMiser1 = (SDL_Rect){Faceplate_DIM.x + 135, Faceplate_DIM.y + 90, Buttons_DIM.w / 2, Buttons_DIM.h / 2};
-        BMiserMax = (SDL_Rect){Faceplate_DIM.x + 275, Faceplate_DIM.y + 90, Buttons_DIM.w / 2, Buttons_DIM.h / 2};
-        BJouer = (SDL_Rect){Faceplate_DIM.x + 450, Faceplate_DIM.y + 90, Buttons_DIM.w / 2, Buttons_DIM.h / 2};
+        BMiser1 = (SDL_Rect){Faceplate_DIM.x + (SCREEN_X * 0.51f), Faceplate_DIM.y + (SCREEN_Y * 0.79f), Buttons_DIM.w, Buttons_DIM.h};
+        BMiserMax = (SDL_Rect){Faceplate_DIM.x + (SCREEN_X * 0.59f), Faceplate_DIM.y + (SCREEN_Y * 0.79f), Buttons_DIM.w, Buttons_DIM.h};
+        BJouer = (SDL_Rect){Faceplate_DIM.x + (SCREEN_X * 0.15f), Faceplate_DIM.y + (SCREEN_Y * 0.79f), Buttons_DIM.w, Buttons_DIM.h};
+        ScaleTextureToLinkedPercent(&BMiser1, SCREEN_X, 6);
+        ScaleTextureToLinkedPercent(&BMiserMax, SCREEN_X, 6);
+        ScaleTextureToLinkedPercent(&BJouer, SCREEN_X, 6);
 
-        Reel = loadImage(ImagePath"reel.bmp", Renderer);
         SDL_QueryTexture(Reel, NULL, NULL, &Reel1.w, &ReelSize); // On récupère seulement l'épaisseur de la texture
-        Reel3.w = Reel2.w = Reel1.w; // On définit les dimensions des trois rouleaux
-        Reel3.h = Reel2.h = Reel1.h = Reel1.w * 1.5f;
+        Reel1_DIM.w = Reel3.w = Reel2.w = Reel1.w; // On définit les dimensions des trois rouleaux
+        Reel1_DIM.h = Reel3.h = Reel2.h = Reel1.h = Reel1.w * 1.5f;
         Reel3.y = Reel2.y = Reel1.y = ReelOffset.y; // On déffini la position par défaut (offset) des rouleaux
+
+        ScaleTextureToLinkedPercent(&Reel1_DIM, SCREEN_X, 15);
+        Reel1_DIM = (SDL_Rect){(SCREEN_X * 0.120f), (SCREEN_Y * 0.215f), Reel1_DIM.w, Reel1_DIM.h};
+        Reel2_DIM = (SDL_Rect){((Faceplate_DIM.w - Reel1_DIM.w) >> 1) , (SCREEN_Y * 0.215f), Reel1_DIM.w, Reel1_DIM.h};
+        Reel3_DIM = (SDL_Rect){(SCREEN_X * 0.482f), (SCREEN_Y * 0.215f), Reel1_DIM.w, Reel1_DIM.h};
+
 
         // Snaps the slots into place for the default combination
         snapSlots(&Reel1, ReelOffset.y, ReelOffset.x, SlotIndex[0]);
         snapSlots(&Reel2, ReelOffset.y, ReelOffset.x, SlotIndex[1]);
         snapSlots(&Reel3, ReelOffset.y, ReelOffset.x, SlotIndex[2]);
 
-        Shadow = loadImage(ImagePath"shadow.bmp", Renderer);
-        Sign = loadImage(ImagePath"sign.bmp", Renderer);
 
-        coinIn = loadSoundEffect(SoundPath"payout1.ogg");
-        coinIn2 = loadSoundEffect(SoundPath"payout2.ogg");
-        coinIn3 = loadSoundEffect(SoundPath"payout3.ogg");
-        spin = loadSoundEffect(SoundPath"spin0.wav");
-        backgroundMusic = loadMusic(SoundPath"Halos of Eternity.ogg");
-        bakInitialD = loadMusic(SoundPath"InitialD.ogg");
+
         Mix_PlayMusic(backgroundMusic, -1);
         Mix_VolumeMusic(64);
 
         SDL_StartTextInput(); // On active l'entré texte par défaut car la machine a sou ne contient pas de crédits au démarrage
     }
-
-    if ((SlotFont = fopen(FontPath, "r")) == NULL){
-        fprintf(stderr, "Erreur au chargement des cartes\n");
-        exit(-1);
-    }
-    fscanf(SlotFont, "%d %d", &SlotSize.x, &SlotSize.y); fseek(SlotFont, 1, SEEK_CUR);
-    SlotSize.x += 2; // +1 \n +1 \0
-    CardSize = SlotSize.y;
-    SlotSize.y *= NBL; // on a la taille d'une carte on veut toutes les cartes
-
-    char CardIndex[SlotSize.y][SlotSize.x]; // On déclare un tableau pouvant contenir toutes les cartes
-    LoadTabFromFile(SlotSize.y, SlotSize.x, CardIndex, SlotFont); // On charge nottre fichier dans notre tableau
-
-    SetConsoleSize(LINES, COLUMNS); // On standardise la taille de la console affin d'éviter les problèmes d'affichage
 
     while (1){ // Main loop
 
@@ -491,14 +587,32 @@ int main(int argc, char *argv[]){
                     case SDL_SCANCODE_BACKSPACE:
                         Credits /= 10;
                         break;
+                    case SDL_SCANCODE_LEFT:
+                        selectedTheme--;
+                        if (selectedTheme < 0){selectedTheme = NB_OF_THEMES;};
+                        goto themeini;
+                        break;
+                    case SDL_SCANCODE_RIGHT:
+                        selectedTheme++;
+                        if (selectedTheme > NB_OF_THEMES){selectedTheme = 0;}
+                        goto themeini;
+                        break;
                     default:
                         break;
                     }
                     break;
                 case SDL_TEXTINPUT:             
                     if ((event.text.text[0] >= '0') && (event.text.text[0] <= '9')){
-                        Credits *= 10;
-                        Credits += (event.text.text[0] - 48);
+                        int i = 0;
+                        int Cred = Credits;
+                        while (Cred != 0){
+                            i++;
+                            Cred /= 10;
+                        }
+                        if (i < 8){
+                            Credits *= 10;
+                            Credits += (event.text.text[0] - 48);
+                        }
                     }
                     break;
                 default:
@@ -507,16 +621,7 @@ int main(int argc, char *argv[]){
             }
 
             // Affichage des éléments (Back to Front)
-            SDL_RenderCopy(Renderer, Faceplate, NULL, &Faceplate_DIM); // Affichage faceplate
-            SDL_RenderCopy(Renderer, Digits[Mise], NULL, &(SDL_Rect){Faceplate_DIM.x + 471, Faceplate_DIM.y + 30, 23, 32}); // Affichage de la mise
-            drawNB(Renderer, Digits, NULL, &(SDL_Rect){Faceplate_DIM.x + 120, Faceplate_DIM.y + 30, 23, 32}, (Vector2i){27, 0}, 4, Gains); // Affichage des gains
-            if (!creditBlink){
-                drawNB(Renderer, Digits, NULL, &(SDL_Rect){Faceplate_DIM.x + 263, Faceplate_DIM.y + 30, 23, 32}, (Vector2i){27, 0}, 4, Credits); // Affichage du nombre de crédits
-            }
-            // On décompose les rect affin d'avoir un plus grand control sur leurs valeurs
-            SDL_RenderCopy(Renderer, Buttons, &(SDL_Rect){Buttons_DIM.w * 0, Buttons_DIM.h * 1, Buttons_DIM.w, Buttons_DIM.h}, &BMiser1); // Miser 1
-            SDL_RenderCopy(Renderer, Buttons, &(SDL_Rect){Buttons_DIM.w * 1, Buttons_DIM.h * 1, Buttons_DIM.w, Buttons_DIM.h}, &BMiserMax); // Miser Max
-            SDL_RenderCopy(Renderer, Buttons, &(SDL_Rect){Buttons_DIM.w * 2, Buttons_DIM.h * 1, Buttons_DIM.w, Buttons_DIM.h}, &BJouer); // Jouer
+            SDL_RenderCopy(Renderer, BackGround, NULL, NULL); // On affiche le background
 
             // On affiche les slots
             if (ReelStep[0] > -2){
@@ -537,16 +642,27 @@ int main(int argc, char *argv[]){
                 Gains = GuiGains;
             }
 
-            SDL_RenderCopy(Renderer, Reel, &Reel1, &(SDL_Rect){(SCREEN_X / 4) - (Reel1.w / 8), 50, Reel1.w / 4, Reel1.h / 4});
-            SDL_RenderCopy(Renderer, Shadow, NULL, &(SDL_Rect){(SCREEN_X / 4) - (Reel1.w / 8), 50, Reel1.w / 4, Reel1.h / 4});
+            SDL_RenderCopy(Renderer, Reel, &Reel1, &Reel1_DIM);
+            SDL_RenderCopy(Renderer, Shadow, NULL, &Reel1_DIM);
 
-            SDL_RenderCopy(Renderer, Reel, &Reel2, &(SDL_Rect){(SCREEN_X / 4) * 2 - (Reel2.w / 8), 50, Reel2.w / 4, Reel2.h / 4});
-            SDL_RenderCopy(Renderer, Shadow, NULL, &(SDL_Rect){(SCREEN_X / 4) * 2 - (Reel2.w / 8), 50, Reel2.w / 4, Reel2.h / 4});
+            SDL_RenderCopy(Renderer, Reel, &Reel2, &Reel2_DIM);
+            SDL_RenderCopy(Renderer, Shadow, NULL, &Reel2_DIM);
 
-            SDL_RenderCopy(Renderer, Reel, &Reel3, &(SDL_Rect){(SCREEN_X / 4) * 3 - (Reel3.w / 8), 50, Reel3.w / 4, Reel3.h / 4});
-            SDL_RenderCopy(Renderer, Shadow, NULL, &(SDL_Rect){(SCREEN_X / 4) * 3 - (Reel3.w / 8), 50, Reel3.w / 4, Reel3.h / 4});
+            SDL_RenderCopy(Renderer, Reel, &Reel3, &Reel3_DIM);
+            SDL_RenderCopy(Renderer, Shadow, NULL, &Reel3_DIM);
 
-            //SDL_RenderCopy(Renderer, Sign, NULL, NULL);
+            SDL_RenderCopy(Renderer, Faceplate, NULL, &Faceplate_DIM); // Affichage faceplate
+            SDL_RenderCopy(Renderer, Digits[Mise], NULL, &Mise_DIM); // Affichage de la mise
+            drawNB(Renderer, Digits, NULL, Gains_DIM, Digits_OFFSETS, 5, Gains); // Affichage des gains
+            if (!creditBlink){
+                drawNB(Renderer, Digits, NULL, Credits_DIM, Digits_OFFSETS, 8, Credits); // Affichage du nombre de crédits
+            }
+            // On décompose les rect affin d'avoir un plus grand control sur leurs valeurs
+            SDL_RenderCopy(Renderer, Buttons, &(SDL_Rect){Buttons_DIM.w * 0, Buttons_DIM.h * 1, Buttons_DIM.w, Buttons_DIM.h}, &BMiser1); // Miser 1
+            SDL_RenderCopy(Renderer, Buttons, &(SDL_Rect){Buttons_DIM.w * 1, Buttons_DIM.h * 1, Buttons_DIM.w, Buttons_DIM.h}, &BMiserMax); // Miser Max
+            SDL_RenderCopy(Renderer, Buttons, &(SDL_Rect){Buttons_DIM.w * 2, Buttons_DIM.h * 1, Buttons_DIM.w, Buttons_DIM.h}, &BJouer); // Jouer
+
+            SDL_RenderCopy(Renderer, Sign, NULL, &SignDIM);
 
             SDL_RenderPresent(Renderer); // on termine le rendu et l'affiche a l'écran
         }
@@ -555,14 +671,28 @@ int main(int argc, char *argv[]){
 Shutdown:
     fclose(SlotFont);
     if (GUI){
+        
+        // On libère les texture du programme
+        SDL_DestroyTexture(NeoPlate);
+        SDL_DestroyTexture(Buttons);
+        SDL_DestroyTexture(NeoReel);
+        SDL_DestroyTexture(casinoReel);
+        SDL_DestroyTexture(Shadow);
+        SDL_DestroyTexture(NeoSign);
+        SDL_DestroyTexture(neoBG);
+        SDL_DestroyTexture(casinoBG);
+
+        for (int i = 0; i < 10; i++){
+            SDL_DestroyTexture(Digits[i]);
+        }
 
         // On libère les éffets sonores et la musique
         Mix_FreeChunk(coinIn);
         Mix_FreeChunk(coinIn2);
         Mix_FreeChunk(coinIn3);
         Mix_FreeChunk(spin);
-        Mix_FreeMusic(backgroundMusic);
-        Mix_FreeMusic(bakInitialD);
+        Mix_FreeMusic(neoBGM);
+        Mix_FreeMusic(casinoBGM);
 
         Mix_Quit(); // On quitte le moteur audio 
         SDL_DestroyRenderer(Renderer); // On détruit le renderer
