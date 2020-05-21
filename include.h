@@ -14,7 +14,7 @@
 #define SCREEN_X 1920
 #define SCREEN_Y 1080
 
-#define NB_OF_THEMES 2
+#define NB_OF_THEMES 1
 
 #define LINES 24
 #define COLUMNS 80
