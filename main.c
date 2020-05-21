@@ -38,6 +38,34 @@ int intcmp(int tab1[], int tab2[], int arraySize){
     return 1;
 }
 
+// teste si une la combinaison tab1 est composé des chiffres tab2 (chaque chiffre étant présent qu'une fois dans la combinaison)
+int intUni(int tab1[], int tab2[], int arraySize){
+    int Ccount;
+    for (int i = 0; i < arraySize; i++){
+        Ccount = 0;
+        for (int j = 0; j < arraySize; j++){
+            if (tab2[i] == tab1[j]){
+                Ccount++;
+            }
+        }
+        if (Ccount != 1){
+            return 0;
+        }
+    }
+    return 1;
+}
+
+// Retourne le nombre de fois qu'un chiffre apparait dans une combinaision
+int nbOfOcurences(int tab1[], int number, int arraySize){
+    int Ccount = 0;
+    for (int i = 0; i < arraySize; i++){
+        if (tab1[i] == number){
+            Ccount++;
+        }
+    }
+    return Ccount;
+}
+
 void LoadTabFromFile(int TabY, int TabX, char CardIndex[TabY][TabX], FILE* FileStream){ // Charge un fichier dans un tableau char**
     for (int i = 0; i < TabY; i++){
         fgets(CardIndex[i], TabX, FileStream); // récupère une ligne d'un fichier
@@ -136,7 +164,7 @@ void animateSlots(SDL_Rect * coordinates,int originOffset, int stepOffset, int n
     //printf("%d\n", (*coordinates).y);
 }
 
-void tirage(int * Gains, int Mise, char TabDeck[], int SlotIndex[], int WinRewards[]){
+void tirage(int * Gains, int Mise, char TabDeck[], int SlotIndex[], int WinRewards[], char Mode){
     // Génération aléatoire des slots (tirage)
     for (int i = 0; i < 3; i++){
         SlotIndex[i] = rand()%NBL; // int
@@ -144,44 +172,99 @@ void tirage(int * Gains, int Mise, char TabDeck[], int SlotIndex[], int WinRewar
 
     // Recherche de la valeur du gain
     *Gains = 0;
-    // "Any color" combination
-    if (((SlotIndex[0] == 2) || (SlotIndex[0] == 5) || (SlotIndex[0] == 1)) && ((SlotIndex[1] == 2) || (SlotIndex[1] == 5) || (SlotIndex[1] == 1)) && ((SlotIndex[2] == 2) || (SlotIndex[2] == 5) || (SlotIndex[2] == 1))){ // Any blue
-        *Gains = WinRewards[1] * Mise; //printf("Nya 0\n");
-    } else if (((SlotIndex[0] == 0) || (SlotIndex[0] == 1) || (SlotIndex[0] == 4)) && ((SlotIndex[1] == 0) || (SlotIndex[1] == 1) || (SlotIndex[1] == 4)) && ((SlotIndex[2] == 0) || (SlotIndex[2] == 1) || (SlotIndex[2] == 4))){ // Any red
-        *Gains = WinRewards[1] * Mise; //printf("Nya 1\n");
-    } else if (((SlotIndex[0] == 1) || (SlotIndex[0] == 3) || (SlotIndex[0] == 6)) && ((SlotIndex[1] == 1) || (SlotIndex[1] == 3) || (SlotIndex[1] == 6)) && ((SlotIndex[2] == 1) || (SlotIndex[2] == 3) || (SlotIndex[2] == 6))){ // Any white
-        *Gains = WinRewards[1] * Mise; //printf("Nya 2\n");
-    }
-    
-    // Half specific combination
-    if (((SlotIndex[0] == 0) || (SlotIndex[0] == 3) || (SlotIndex[0] == 5)) && ((SlotIndex[1] == 0) || (SlotIndex[1] == 3) || (SlotIndex[1] == 5)) && ((SlotIndex[2] == 0) || (SlotIndex[2] == 3) || (SlotIndex[2] == 5))){ // Any mixed sevens
-        *Gains = WinRewards[6] * Mise; //printf("Nya 3\n");
-    } else if (((SlotIndex[0] == 0) || (SlotIndex[0] == 1) || (SlotIndex[0] == 4)) && ((SlotIndex[1] == 1) || (SlotIndex[1] == 3) || (SlotIndex[1] == 6)) && ((SlotIndex[2] == 2) || (SlotIndex[2] == 5) || (SlotIndex[2] == 1))){ // Any red, Any White, Any Blue
-        *Gains = WinRewards[4] * Mise; //printf("Nya 4\n");
-    } else if (((SlotIndex[0] == 2) || (SlotIndex[0] == 4) || (SlotIndex[0] == 6)) && ((SlotIndex[1] == 2) || (SlotIndex[1] == 4) || (SlotIndex[1] == 6)) && ((SlotIndex[2] == 2) || (SlotIndex[2] == 4) || (SlotIndex[2] == 6))){ // Any bar
-        *Gains = WinRewards[2] * Mise; //printf("Nya 5\n");
-    }
+    // Luck manipulation (for debug purposes)
+    /*
+    SlotIndex[0] = 2;
+    SlotIndex[1] = 6;
+    SlotIndex[2] = 2;*/
 
-    // Specific combinaition
-    if (intcmp(SlotIndex, (int[3]){4, 4, 4}, 3)){ // Full red bar
-        *Gains = WinRewards[3] * Mise; //printf("Nya 6\n");
-    } else if (intcmp(SlotIndex, (int[3]){6, 6, 6}, 3)){ // Full white bar
-        *Gains = WinRewards[4] * Mise; //printf("Nya 7\n");
-    } else if (intcmp(SlotIndex, (int[3]){2, 2, 2}, 3)){ // Full blue bar
-        *Gains = WinRewards[5] * Mise; //printf("Nya 8\n");
-    } else if (intcmp(SlotIndex, (int[3]){5, 5, 5}, 3)){ // Full blue sevens
-        *Gains = WinRewards[7] * Mise; //printf("Nya 9\n");
-    } else if (intcmp(SlotIndex, (int[3]){3, 3, 3}, 3)){ // Full white sevens
-        *Gains = WinRewards[8] * Mise; //printf("Nya 10\n");
-    } else if (intcmp(SlotIndex, (int[3]){0, 0, 0}, 3)){ // Full red sevens{
-        *Gains = WinRewards[9] * Mise; //printf("Nya 11\n");
-    } else if (intcmp(SlotIndex, (int[3]){0, 3, 5}, 3)){ // Red white blue seven
-        *Gains = WinRewards[10] * Mise; //printf("Nya 12\n");
-    } else if (intcmp(SlotIndex, (int[3]){1, 1, 1}, 3)){ // Wild x3
-        if (Mise < 3){
-            *Gains = WinRewards[11] * Mise; //printf("Nya 13\n");
-        }else{
-            *Gains = WinRewards[12];
+    if (Mode){ // Casino mode
+        // "Any color" combination
+        if (((SlotIndex[0] == 2) || (SlotIndex[0] == 5) || (SlotIndex[0] == 1)) && ((SlotIndex[1] == 2) || (SlotIndex[1] == 5) || (SlotIndex[1] == 1)) && ((SlotIndex[2] == 2) || (SlotIndex[2] == 5) || (SlotIndex[2] == 1))){ // Any blue
+            *Gains = WinRewards[1] * Mise; //printf("Nya 0\n");
+        } else if (((SlotIndex[0] == 0) || (SlotIndex[0] == 1) || (SlotIndex[0] == 4)) && ((SlotIndex[1] == 0) || (SlotIndex[1] == 1) || (SlotIndex[1] == 4)) && ((SlotIndex[2] == 0) || (SlotIndex[2] == 1) || (SlotIndex[2] == 4))){ // Any red
+            *Gains = WinRewards[1] * Mise; //printf("Nya 1\n");
+        } else if (((SlotIndex[0] == 1) || (SlotIndex[0] == 3) || (SlotIndex[0] == 6)) && ((SlotIndex[1] == 1) || (SlotIndex[1] == 3) || (SlotIndex[1] == 6)) && ((SlotIndex[2] == 1) || (SlotIndex[2] == 3) || (SlotIndex[2] == 6))){ // Any white
+            *Gains = WinRewards[1] * Mise; //printf("Nya 2\n");
+        }
+        
+        // Half specific combination
+        if (((SlotIndex[0] == 0) || (SlotIndex[0] == 3) || (SlotIndex[0] == 5)) && ((SlotIndex[1] == 0) || (SlotIndex[1] == 3) || (SlotIndex[1] == 5)) && ((SlotIndex[2] == 0) || (SlotIndex[2] == 3) || (SlotIndex[2] == 5))){ // Any mixed sevens
+            *Gains = WinRewards[6] * Mise; //printf("Nya 3\n");
+        } else if (((SlotIndex[0] == 0) || (SlotIndex[0] == 1) || (SlotIndex[0] == 4)) && ((SlotIndex[1] == 1) || (SlotIndex[1] == 3) || (SlotIndex[1] == 6)) && ((SlotIndex[2] == 2) || (SlotIndex[2] == 5) || (SlotIndex[2] == 1))){ // Any red, Any White, Any Blue
+            *Gains = WinRewards[4] * Mise; //printf("Nya 4\n");
+        } else if (((SlotIndex[0] == 2) || (SlotIndex[0] == 4) || (SlotIndex[0] == 6)) && ((SlotIndex[1] == 2) || (SlotIndex[1] == 4) || (SlotIndex[1] == 6)) && ((SlotIndex[2] == 2) || (SlotIndex[2] == 4) || (SlotIndex[2] == 6))){ // Any bar
+            *Gains = WinRewards[2] * Mise; //printf("Nya 5\n");
+        } else if (nbOfOcurences(SlotIndex, 1, 3) == 2){ // Any two wild
+            *Gains = WinRewards[2] * Mise;
+        } else if (nbOfOcurences(SlotIndex, 1, 3) == 1){ // Any one wild
+            *Gains = WinRewards[1] * Mise;
+        }
+
+        // Specific combinaition
+        if (intcmp(SlotIndex, (int[3]){4, 4, 4}, 3)){ // Full red bar
+            *Gains = WinRewards[3] * Mise; //printf("Nya 6\n");
+        } else if (intcmp(SlotIndex, (int[3]){6, 6, 6}, 3)){ // Full white bar
+            *Gains = WinRewards[4] * Mise; //printf("Nya 7\n");
+        } else if (intcmp(SlotIndex, (int[3]){2, 2, 2}, 3)){ // Full blue bar
+            *Gains = WinRewards[5] * Mise; //printf("Nya 8\n");
+        } else if (intcmp(SlotIndex, (int[3]){5, 5, 5}, 3)){ // Full blue sevens
+            *Gains = WinRewards[7] * Mise; //printf("Nya 9\n");
+        } else if (intcmp(SlotIndex, (int[3]){3, 3, 3}, 3)){ // Full white sevens
+            *Gains = WinRewards[8] * Mise; //printf("Nya 10\n");
+        } else if (intcmp(SlotIndex, (int[3]){0, 0, 0}, 3)){ // Full red sevens
+            *Gains = WinRewards[9] * Mise; //printf("Nya 11\n");
+        } else if (intcmp(SlotIndex, (int[3]){0, 3, 5}, 3)){ // Red white blue seven
+            *Gains = WinRewards[10] * Mise; //printf("Nya 12\n");
+        } else if (intcmp(SlotIndex, (int[3]){1, 1, 1}, 3)){ // Wild x3
+            if (Mise < 3){
+                *Gains = WinRewards[11] * Mise; //printf("Nya 13\n");
+            }else{
+                *Gains = WinRewards[12];
+            }
+        }
+    }else{ // Texte mode
+        // "Any" combination
+        if ((SlotIndex[0] == SlotIndex[1]) && (SlotIndex[0] == SlotIndex[2])){ // Any same
+            *Gains = WinRewards[9] * Mise;
+        } else if (((nbOfOcurences(SlotIndex, 6, 3) == 1) && (nbOfOcurences(SlotIndex, 1, 3) == 0) && (nbOfOcurences(SlotIndex, 4, 3) == 0)) || ((nbOfOcurences(SlotIndex, 1, 3) == 1) && (nbOfOcurences(SlotIndex, 6, 3) == 0) && (nbOfOcurences(SlotIndex, 4, 3) == 0)) || ((nbOfOcurences(SlotIndex, 4, 3) == 1) && (nbOfOcurences(SlotIndex, 1, 3) == 0) && (nbOfOcurences(SlotIndex, 6, 3) == 0))){ // Any one vowel
+            *Gains = WinRewards[1] * Mise;
+        } // 6 1 4 
+        
+        // Half specific combination
+        if (intUni(SlotIndex, (int[3]){3, 1, 0}, 3)){ // Any mixed NEB
+            *Gains = WinRewards[6] * Mise;
+        } else if (nbOfOcurences(SlotIndex, 5, 3) == 2){ // Any two S
+            *Gains = WinRewards[7] * Mise;
+        } else if (nbOfOcurences(SlotIndex, 5, 3) == 1){ // Any one S
+            *Gains = WinRewards[4] * Mise;
+        }
+
+        // Specific combinaition
+        if (intcmp(SlotIndex, (int[3]){2, 4, 2}, 3)){ // LOL
+            *Gains = WinRewards[1] * Mise;
+        } else if (intcmp(SlotIndex, (int[3]){0, 6, 2}, 3)){ // Bal
+            *Gains = WinRewards[2] * Mise;
+        } else if (intcmp(SlotIndex, (int[3]){0, 1, 2}, 3)){ // Bel
+            *Gains = WinRewards[2] * Mise;
+        } else if (intcmp(SlotIndex, (int[3]){3, 1, 2}, 3)){ // Nel (Bleach)
+            *Gains = WinRewards[3] * Mise;
+        } else if (intcmp(SlotIndex, (int[3]){0, 4, 3}, 3)){ // Bon
+            *Gains = WinRewards[4] * Mise;
+        } else if (intcmp(SlotIndex, (int[3]){0, 6, 3}, 3)){ // Ban (Hammer)
+            *Gains = WinRewards[5] * Mise;
+        } else if (intcmp(SlotIndex, (int[3]){6, 0, 1}, 3)){ // Abe (Odyssey)
+            *Gains = WinRewards[6] * Mise;
+        } else if (intcmp(SlotIndex, (int[3]){3, 1, 4}, 3)){ // Neo (Matrix)
+            *Gains = WinRewards[8] * Mise;
+        } else if (intcmp(SlotIndex, (int[3]){4, 5, 5}, 3)){ // OSS 117
+            *Gains = WinRewards[10] * Mise;
+        } else if (intcmp(SlotIndex, (int[3]){5, 5, 5}, 3)){ // SSS
+            if (Mise < 3){
+                *Gains = WinRewards[11] * Mise;
+            }else{
+                *Gains = WinRewards[12];
+            }
         }
     }
 
@@ -207,7 +290,7 @@ void ScaleTextureToLinkedPercent(SDL_Rect *Dimensions, int LinkedRes, float Perc
 int main(int argc, char *argv[]){
     // Déclaration des variables principales
     int Gains = 0, GuiGains = 0, Credits = 0, Mise = 0, MaxMise = 3, BankIN = 0, LastMise = 0;
-    char GUI = 0, ReturnStatus = 0, TextInput = 1; // Booléen de sélection (char car il n'a besoin que d'etre 0 ou 1)
+    char GUI = 1, ReturnStatus = 0, TextInput = 1; // Booléen de sélection (char car il n'a besoin que d'etre 0 ou 1)
 
     char TabDeck[NBL] = "BELNOSI"; // 0 -> 5 Les lettres qui peuvent tomber
     int WinRewards[WIN] = {1, 2, 5, 10, 20, 40, 50, 100, 200, 300, 400, 4000, 20000}; // Les gains associés
@@ -227,11 +310,14 @@ int main(int argc, char *argv[]){
     char creditBlink = 0; // Booléen indiquant si le compteur des crédits clignote ou pas (saisie des crédits au clavier en mode gui)
     int creditBlinkTimer = 0, creditBlinkDelay = 500; // En milisecondes
 
-    char selectedTheme = 0; // Le thème qu'utiliseras le programme : 0 = NEO (chiffres), 1 = DICE, 2 = CASINO (ExcluSDL)
+    char selectedTheme = 0; // Le thème qu'utiliseras le programme : 0 = NEO (chiffres), 1 = CASINO (ExcluSDL) / DICE (Terminal)
+    char rewardMode = 0; // 0 mode adapté pour du texte, 1 mode plus complexe adapté pour le thème casino
 
     // Déclaration liée a la SDL
+    char Fullscreen = 1;
     SDL_Window* MainWindow; // Fenêtre principale
     SDL_Renderer* Renderer; // Structure nous permettant de dessinner dans la fenêtre
+    SDL_DisplayMode DesktopDisplayMode; // Contient les propriétés de l'écran
 
     SDL_Texture* Faceplate; // Le dash
     SDL_Texture* NeoPlate; // --- Neo
@@ -274,7 +360,12 @@ int main(int argc, char *argv[]){
         for (int i = 1; i < argc; i++){ // Recherche et traitement de tout les arguments (commence a 1 car l'argument #0 est le nom de l'executable)
             if (strcmp(argv[i], "-SDL") == 0){ // si l'utilisateur sélectione un gui (== 0 signifie que les deux strings n'ont aucune différence)
                 GUI = 1;
-            }else if (strcmp(argv[i], "-t") == 0){ // Theme selector
+            } else if (strcmp(argv[i], "-Term") == 0){
+                GUI = 0;
+                rewardMode = 0;
+            } else if (strcmp(argv[i], "-w") == 0){
+                Fullscreen = 0;
+            } else if (strcmp(argv[i], "-t") == 0){ // Theme selector
                 if (argc > i+1){ // s'il y a un argument après -t
                     selectedTheme = atoi(argv[++i]);
                     if (selectedTheme < 0){
@@ -283,10 +374,77 @@ int main(int argc, char *argv[]){
                         selectedTheme = NB_OF_THEMES;
                     }
                 }
-            
-            }else if (strcmp(argv[i], "-OSS") == 0){ // Easter egg
+            } else if (strcmp(argv[i], "-r") == 0){ // Resolution selector
+                if (argc > i+1){ // s'il y a un argument après -r
+                    char Res = atoi(argv[++i]);
+                    if ((Res < 0) || (Res > 5) || (argv[i][0] - 48 < 0) || (argv[i][0] - 48 > 5)){ // si arguments invalide
+                        Res = 3;
+                        i--;
+                    }
+                    switch (Res){
+                        case 0:
+                            WindowRES.x = 3840;
+                            WindowRES.y = 2160;
+                            break;
+                        case 1:
+                            WindowRES.x = 2560;
+                            WindowRES.y = 1440;
+                            break;
+                        case 2:
+                            WindowRES.x = 1920;
+                            WindowRES.y = 1080;
+                            break;
+                        case 3:
+                            WindowRES.x = 1600;
+                            WindowRES.y = 900;
+                            break;
+                        case 4:
+                            WindowRES.x = 1280;
+                            WindowRES.y = 720;
+                            break;
+                        case 5:
+                            WindowRES.x = 640;
+                            WindowRES.y = 360;
+                            break;
+                    }
+                }
+            } else if (strcmp(argv[i], "-cr") == 0){
+                if (argc > i+2){ // s'il y a deux arguments après -cr
+                    WindowRES.x = atoi(argv[++i]);
+                    WindowRES.y = atoi(argv[++i]);
+                    if (WindowRES.x < 0){
+                        WindowRES.x = 1600;
+                    }
+                    if (WindowRES.y < 0){
+                        WindowRES.y = 900;
+                    }
+                }
+            } else if (strcmp(argv[i], "-OSS") == 0){ // Easter egg
                 printf("D'aucuns ont des aventures je suis une aventure.\n");
                 exit(-1);
+            } else if ((strcmp(argv[i], "--help") == 0) || (strcmp(argv[i], "-h") == 0)){
+                printf("YetAnotherSlotProject est un jeu de machine a sous donné en projet de 1A-S2 ESIEA\n"
+                        "Le jeu se lance par défaut en utilisant la SDL, pour obtenir la version terminal Utiliser l'option -Term\n\n"
+                        "Liste des options :\n"
+                        "-SDL  : Lance le jeu en mode SDL\n"
+                        "-Term : Lance le jeu en mode Terminal\n"
+                        "-t    : Selectionne le thème a utiliser\n"
+                        "           0 = NEON (Lettres)\n"
+                        "           1 = Casino (ExcluSDL) / Dice (ExcluTerminal)\n"
+                        "-w    : Lance le jeu en mode fenétré\n"
+                        "-r    : Change la résolution en mode fenétré entre certains préset:\n"
+                        "           0 = 3840*2160 UHD (16/9)\n"
+                        "           1 = 2560*1440 QHD(16/9)\n"
+                        "           2 = 1920*1080 FullHD (16/9)\n"
+                        "           3 = 1600*900 (16/9) [Default]\n"
+                        "           4 = 1280*720 HD (16/9)\n"
+                        "           5 = 640*360 SD(16/9)\n"
+                        "-cr   : Change la résolution en mode fenétré par une résolution au choix\n"
+                        "           (Gardez en tête que ce jeu a été conçu pour un affichage en 16/9     )\n"
+                        "           (et qu'un ratio d'aspect différent peut causer des disfonctionnements)\n\n"
+                        "-h ou --help : Affiche ce menu d'aide\n\n"
+                        "Credits : RAIMBAUD Killian & TOUGARD Enzo / 2020\n");
+                exit(0);
             }
         }
     }
@@ -312,7 +470,14 @@ int main(int argc, char *argv[]){
             exit(-1);
         }
 
-        MainWindow = SDL_CreateWindow(SLOTMACHINE_NAME, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, SCREEN_X,SCREEN_Y, SDL_WINDOW_SHOWN);
+        if(SDL_GetDesktopDisplayMode(0, &DesktopDisplayMode) != 0){
+            fprintf(stderr, "Can't get the desktop display mode %s\n", SDL_GetError());
+            exit(-1);
+        }
+        FullscreenRES.x = DesktopDisplayMode.w;
+        FullscreenRES.y = DesktopDisplayMode.h;
+
+        MainWindow = SDL_CreateWindow(SLOTMACHINE_NAME, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, WindowRES.x,WindowRES.y, SDL_WINDOW_SHOWN);
         if (MainWindow == NULL){ // Gestion des erreurs (Creation de la fenêtre)
             fprintf(stderr, "Erreur a la creation de la fenêtre : %s\n", SDL_GetError()); // On affiche le message d'erreur s'il y en a un
             exit(-1);
@@ -325,6 +490,16 @@ int main(int argc, char *argv[]){
         }
 
         SDL_GL_SetSwapInterval(1); // Turn on vsync
+
+        if (Fullscreen){
+            SDL_SetWindowFullscreen(MainWindow, SDL_WINDOW_FULLSCREEN_DESKTOP);
+            ScreenRES.x = FullscreenRES.x;
+            ScreenRES.y = FullscreenRES.y;
+        }else{
+            SDL_SetWindowFullscreen(MainWindow, 0);
+            ScreenRES.x = WindowRES.x;
+            ScreenRES.y = WindowRES.y;
+        }
 
         // Initialisation du moteur audio en qualité CD 44100Khz, Stereo, 1kb par chunk
         if(Mix_OpenAudio(44100, MIX_DEFAULT_FORMAT, 2, 1024) != 0){
@@ -368,6 +543,7 @@ themeini:
                 Faceplate = NeoPlate;
                 Reel = NeoReel;
                 backgroundMusic = neoBGM;
+                rewardMode = 0;
                 break;
             case 1: // CASINO
                 BackGround = casinoBG;
@@ -375,44 +551,49 @@ themeini:
                 Faceplate = CasinoPlate;
                 Reel = casinoReel;
                 backgroundMusic = casinoBGM;
+                rewardMode = 1;
                 break;
         }
 
+        Mix_PlayMusic(backgroundMusic, -1);
+        Mix_VolumeMusic(64);
+
+scaleini:
         SDL_QueryTexture(Sign, NULL, NULL, &SignDIM.w, &SignDIM.h);
-        ScaleTextureToLinkedPercent(&SignDIM, SCREEN_X, 30);
-        SignDIM.x = SCREEN_X - SignDIM.w;
-        SignDIM.y = (SCREEN_Y - SignDIM.h) / 4;
+        ScaleTextureToLinkedPercent(&SignDIM, ScreenRES.x, 30);
+        SignDIM.x = ScreenRES.x - SignDIM.w;
+        SignDIM.y = (ScreenRES.y - SignDIM.h) / 4;
 
         SDL_QueryTexture(Faceplate, NULL, NULL, &Faceplate_DIM.w, &Faceplate_DIM.h); // on récupère la taille de la texture
-        Scale(&Faceplate_DIM.h, &Faceplate_DIM.w, SCREEN_Y);
+        Scale(&Faceplate_DIM.h, &Faceplate_DIM.w, ScreenRES.y);
 
         SDL_QueryTexture(Digits[0], NULL, NULL, &Digits_DIM.w, &Digits_DIM.h);
-        Gains_DIM = (SDL_Rect){Faceplate_DIM.x + (SCREEN_X * 0.123f), Faceplate_DIM.y + (SCREEN_Y * 0.702f), Digits_DIM.w, Digits_DIM.h};
-        Credits_DIM = (SDL_Rect){Faceplate_DIM.x + (SCREEN_X * 0.285f), Faceplate_DIM.y + (SCREEN_Y * 0.702f), Digits_DIM.w, Digits_DIM.h};
-        Mise_DIM = (SDL_Rect){Faceplate_DIM.x + (SCREEN_X * 0.565f), Faceplate_DIM.y + (SCREEN_Y * 0.702f), Digits_DIM.w, Digits_DIM.h};
-        ScaleTextureToLinkedPercent(&Gains_DIM, SCREEN_X, 2.15f);
-        ScaleTextureToLinkedPercent(&Credits_DIM, SCREEN_X, 2.15f);
-        ScaleTextureToLinkedPercent(&Mise_DIM, SCREEN_X, 2.15f);
-        Digits_OFFSETS = (Vector2i){(SCREEN_X * 0.022f), 0};
+        Gains_DIM = (SDL_Rect){Faceplate_DIM.x + (ScreenRES.x * 0.123f), Faceplate_DIM.y + (ScreenRES.y * 0.702f), Digits_DIM.w, Digits_DIM.h};
+        Credits_DIM = (SDL_Rect){Faceplate_DIM.x + (ScreenRES.x * 0.285f), Faceplate_DIM.y + (ScreenRES.y * 0.702f), Digits_DIM.w, Digits_DIM.h};
+        Mise_DIM = (SDL_Rect){Faceplate_DIM.x + (ScreenRES.x * 0.565f), Faceplate_DIM.y + (ScreenRES.y * 0.702f), Digits_DIM.w, Digits_DIM.h};
+        ScaleTextureToLinkedPercent(&Gains_DIM, ScreenRES.x, 2.15f);
+        ScaleTextureToLinkedPercent(&Credits_DIM, ScreenRES.x, 2.15f);
+        ScaleTextureToLinkedPercent(&Mise_DIM, ScreenRES.x, 2.15f);
+        Digits_OFFSETS = (Vector2i){(ScreenRES.x * 0.022f), 0};
 
         Buttons_DIM.w = 192; Buttons_DIM.h = 125; // Vu que la texture contient tout les boutons on renseignes leur tailles manuellement
         // On initialise la position (et par conséquant leurs hitboxes) des différents boutons de l'interface
-        BMiser1 = (SDL_Rect){Faceplate_DIM.x + (SCREEN_X * 0.51f), Faceplate_DIM.y + (SCREEN_Y * 0.79f), Buttons_DIM.w, Buttons_DIM.h};
-        BMiserMax = (SDL_Rect){Faceplate_DIM.x + (SCREEN_X * 0.59f), Faceplate_DIM.y + (SCREEN_Y * 0.79f), Buttons_DIM.w, Buttons_DIM.h};
-        BJouer = (SDL_Rect){Faceplate_DIM.x + (SCREEN_X * 0.14f), Faceplate_DIM.y + (SCREEN_Y * 0.79f), Buttons_DIM.w, Buttons_DIM.h};
-        ScaleTextureToLinkedPercent(&BMiser1, SCREEN_X, 6);
-        ScaleTextureToLinkedPercent(&BMiserMax, SCREEN_X, 6);
-        ScaleTextureToLinkedPercent(&BJouer, SCREEN_X, 6);
+        BMiser1 = (SDL_Rect){Faceplate_DIM.x + (ScreenRES.x * 0.51f), Faceplate_DIM.y + (ScreenRES.y * 0.79f), Buttons_DIM.w, Buttons_DIM.h};
+        BMiserMax = (SDL_Rect){Faceplate_DIM.x + (ScreenRES.x * 0.59f), Faceplate_DIM.y + (ScreenRES.y * 0.79f), Buttons_DIM.w, Buttons_DIM.h};
+        BJouer = (SDL_Rect){Faceplate_DIM.x + (ScreenRES.x * 0.14f), Faceplate_DIM.y + (ScreenRES.y * 0.79f), Buttons_DIM.w, Buttons_DIM.h};
+        ScaleTextureToLinkedPercent(&BMiser1, ScreenRES.x, 6);
+        ScaleTextureToLinkedPercent(&BMiserMax, ScreenRES.x, 6);
+        ScaleTextureToLinkedPercent(&BJouer, ScreenRES.x, 6);
 
         SDL_QueryTexture(Reel, NULL, NULL, &Reel1.w, &ReelSize); // On récupère seulement l'épaisseur de la texture
         Reel1_DIM.w = Reel3.w = Reel2.w = Reel1.w; // On définit les dimensions des trois rouleaux
         Reel1_DIM.h = Reel3.h = Reel2.h = Reel1.h = Reel1.w * 1.5f;
         Reel3.y = Reel2.y = Reel1.y = ReelOffset.y; // On déffini la position par défaut (offset) des rouleaux
 
-        ScaleTextureToLinkedPercent(&Reel1_DIM, SCREEN_X, 15);
-        Reel1_DIM = (SDL_Rect){(SCREEN_X * 0.120f), (SCREEN_Y * 0.215f), Reel1_DIM.w, Reel1_DIM.h};
-        Reel2_DIM = (SDL_Rect){((Faceplate_DIM.w - Reel1_DIM.w) >> 1) , (SCREEN_Y * 0.215f), Reel1_DIM.w, Reel1_DIM.h};
-        Reel3_DIM = (SDL_Rect){(SCREEN_X * 0.482f), (SCREEN_Y * 0.215f), Reel1_DIM.w, Reel1_DIM.h};
+        ScaleTextureToLinkedPercent(&Reel1_DIM, ScreenRES.x, 15.5f);
+        Reel1_DIM = (SDL_Rect){(ScreenRES.x * 0.120f), (ScreenRES.y * 0.215f), Reel1_DIM.w, Reel1_DIM.h};
+        Reel2_DIM = (SDL_Rect){((Faceplate_DIM.w - Reel1_DIM.w) >> 1) , (ScreenRES.y * 0.215f), Reel1_DIM.w, Reel1_DIM.h};
+        Reel3_DIM = (SDL_Rect){(ScreenRES.x * 0.482f), (ScreenRES.y * 0.215f), Reel1_DIM.w, Reel1_DIM.h};
 
 
         // Snaps the slots into place for the default combination
@@ -420,12 +601,7 @@ themeini:
         snapSlots(&Reel2, ReelOffset.y, ReelOffset.x, SlotIndex[1]);
         snapSlots(&Reel3, ReelOffset.y, ReelOffset.x, SlotIndex[2]);
 
-
-
-        Mix_PlayMusic(backgroundMusic, -1);
-        Mix_VolumeMusic(64);
-
-        SDL_StartTextInput(); // On active l'entré texte par défaut car la machine a sou ne contient pas de crédits au démarrage
+        //SDL_StartTextInput(); // On active l'entré texte par défaut car la machine a sou ne contient pas de crédits au démarrage
     }
 
     while (1){ // Main loop
@@ -475,7 +651,7 @@ themeini:
                 }
 
                 // SlotMachine Logic
-                tirage(&Gains, Mise, TabDeck, SlotIndex, WinRewards); // tirage des combinaisons
+                tirage(&Gains, Mise, TabDeck, SlotIndex, WinRewards, rewardMode); // tirage des combinaisons
                 TextCardDrawDelay = 50; // On délais l'affichage des cartes au tirage affin d'avoir un semblant d'annimation
                 Credits += Gains;
             }
@@ -523,56 +699,57 @@ PLAY:
                                 }else{
                                     LastMise = Mise;
                                 }
-                                tirage(&GuiGains, Mise, TabDeck, SlotIndex, WinRewards); // tirage des combinaisons
+                                tirage(&GuiGains, Mise, TabDeck, SlotIndex, WinRewards, rewardMode); // tirage des combinaisons
                                 ReelStep[0] = 5; ReelStep[1] = 7; ReelStep[2] = 9; // On anime les rouleaux
                                 Mix_PlayChannel(-1, spin, 0); // On joue le son du tirage -1 pour laisser la sdl choisir le channel
                                 Mise = 0;
                                 Gains = 0;
                             }
-                            if (Credits == 0){
-                                TextInput = 1;
-                                SDL_StartTextInput();
-                            }
                         }else if (SDL_PointInRect(&MousePosition, &BMiser1)){
-                            if ((Mise < 3) && (Mise < Credits)){
+P1MISE:
+                            if ((Mise < 3) && (Credits > 0)){
                                 Mise++;
                                 Credits--;
                                 Mix_PlayChannel(-1, coinIn, 0);
                             }
                         }else if (SDL_PointInRect(&MousePosition, &BMiserMax)){
-                            if ((Credits < 3) && (Credits > 0)){
-                                Mise = Credits;
-                                if (Credits == 2){
-                                    Mix_PlayChannel(-1, coinIn2, 0);
-                                }else{
-                                    Mix_PlayChannel(-1, coinIn, 0);
+                            if ((Mise != 3) && (Credits > 0)){
+                                if (Credits < 3){
+                                    Mise = Credits;
+                                    if (Credits == 2){
+                                        Mix_PlayChannel(-1, coinIn2, 0);
+                                    }else{
+                                        Mix_PlayChannel(-1, coinIn, 0);
+                                    }
+                                    Credits = 0;
+                                }else {
+                                    Mise = 3 - Mise;
+                                    Credits -= Mise;
+                                    switch (Mise)
+                                    {
+                                    case 3:
+                                        Mix_PlayChannel(-1, coinIn3, 0);
+                                        break;
+                                    case 2:
+                                        Mix_PlayChannel(-1, coinIn2, 0);
+                                        break;
+                                    case 1:
+                                        Mix_PlayChannel(-1, coinIn, 0);
+                                        break;
+                                    }
+                                    Mise = 3;
                                 }
-                                Credits = 0;
-                            }else if (Mise != 3){
-                                Mise = 3 - Mise;
-                                Credits -= Mise;
-                                switch (Mise)
-                                {
-                                case 3:
-                                    Mix_PlayChannel(-1, coinIn3, 0);
-                                    break;
-                                case 2:
-                                    Mix_PlayChannel(-1, coinIn2, 0);
-                                    break;
-                                case 1:
-                                    Mix_PlayChannel(-1, coinIn, 0);
-                                    break;
-                                }
-                                Mise = 3;
                             }
                         }
                     }
                     break;
                 case SDL_KEYDOWN:
-                    if ((event.key.keysym.scancode == SDL_SCANCODE_RETURN) || (event.key.keysym.scancode == SDL_SCANCODE_RETURN2)){
-                        TextInput = 0;
-                        creditBlink = 0;
-                        SDL_StopTextInput();
+                    if ((event.key.keysym.scancode == SDL_SCANCODE_RETURN) || (event.key.keysym.scancode == SDL_SCANCODE_KP_ENTER)){
+                        if (Credits != 0){
+                            TextInput = 0;
+                            creditBlink = 0;
+                            SDL_StopTextInput();
+                        }
                     } 
                     switch (event.key.keysym.scancode)
                     {
@@ -599,7 +776,29 @@ PLAY:
                         goto themeini;
                         break;
                     case SDL_SCANCODE_SPACE:
-                        goto PLAY;
+                        if (!TextInput && (ReelStep[0] == -3) && (ReelStep[1] == -3) && (ReelStep[2] == -3)){
+                            goto PLAY;
+                        }
+                        break;
+                    case SDL_SCANCODE_KP_PLUS:
+                        if (!TextInput && (ReelStep[0] == -3) && (ReelStep[1] == -3) && (ReelStep[2] == -3)){
+                            goto P1MISE;
+                        }
+                        break;
+                    case SDL_SCANCODE_F:
+                        if (Fullscreen){
+                            SDL_SetWindowFullscreen(MainWindow, 0);
+                            Fullscreen = 0;
+                            ScreenRES.x = WindowRES.x;
+                            ScreenRES.y = WindowRES.y;
+                            goto scaleini;
+                        }else{
+                            SDL_SetWindowFullscreen(MainWindow, SDL_WINDOW_FULLSCREEN_DESKTOP);
+                            Fullscreen = 1;
+                            ScreenRES.x = FullscreenRES.x;
+                            ScreenRES.y = FullscreenRES.y;
+                            goto scaleini;
+                        }
                         break;
                     default:
                         break;
@@ -625,7 +824,7 @@ PLAY:
             }
 
             // Affichage des éléments (Back to Front)
-            SDL_RenderCopy(Renderer, BackGround, NULL, NULL); // On affiche le background
+            SDL_RenderCopy(Renderer, BackGround, NULL,  &(SDL_Rect){0, 0, ScreenRES.x, ScreenRES.y}); // On affiche le background
 
             // On affiche les slots
             if (ReelStep[0] > -2){
@@ -645,6 +844,11 @@ PLAY:
                 ReelStep[0] = ReelStep[1] = ReelStep[2] = -3;
                 Gains = GuiGains;
                 Credits += GuiGains;
+
+                if (Credits == 0){
+                    TextInput = 1;
+                    SDL_StartTextInput();
+                }
             }
 
             SDL_RenderCopy(Renderer, Reel, &Reel1, &Reel1_DIM);

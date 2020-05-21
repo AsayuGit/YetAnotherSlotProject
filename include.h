@@ -11,8 +11,14 @@
 
 #define SLOTMACHINE_NAME "YetAnotherSlotProject"
 
-#define SCREEN_X 1920
-#define SCREEN_Y 1080
+typedef struct {
+    int x;
+    int y;
+} Vector2i;
+
+Vector2i FullscreenRES = {1920, 1080};
+Vector2i WindowRES = {1600, 900};
+Vector2i ScreenRES = {1600, 900};
 
 #define NB_OF_THEMES 1
 
@@ -29,11 +35,6 @@
 #define FontPath "Fonts/SlotFont.txt"
 #define ImagePath "Images/"
 #define SoundPath "Sounds/"
-
-typedef struct Vector2i {
-    int x;
-    int y;
-} Vector2i;
 
 
 #endif
