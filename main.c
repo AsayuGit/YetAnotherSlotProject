@@ -349,6 +349,22 @@ void ScaleTextureToLinkedPercent(SDL_Rect *Dimensions, int LinkedRes, float Perc
     Scale(&(*Dimensions).w, &(*Dimensions).h, ((LinkedRes / 100.0f) * Percent));
 }
 
+void ToWideScreen(Vector2i* SrcRes, Vector2i* DstRes, Vector2i* SclOffset){
+    int TEMP = (float)((*SrcRes).x / 16.0f * 9.0f);
+    if (TEMP < (*SrcRes).y){
+        (*DstRes).x = (*SrcRes).x;
+        (*DstRes).y = TEMP;
+        (*SclOffset).x = 0;
+        (*SclOffset).y = ((*SrcRes).y - (*DstRes).y) >> 1;
+    }else{
+        (*DstRes).y = (*SrcRes).y;
+        (*DstRes).x = (float)((*SrcRes).y / 9.0f * 16.0f);
+        (*SclOffset).y = 0;
+        (*SclOffset).x = ((*SrcRes).x - (*DstRes).x) >> 1;
+    }
+    //printf("Src %d %d\nDst %d %d\nOff %d %d\n", (*SrcRes).x, (*SrcRes).y, (*DstRes).x, (*DstRes).y, (*SclOffset).x, (*SclOffset).y);
+}
+
 int main(int argc, char *argv[]){
     // Déclaration des variables principales
     int Gains = 0, GuiGains = 0, Credits = 0, Mise = 0, MaxMise = 3, BankIN = 0, LastMise = 0;
@@ -636,7 +652,7 @@ int main(int argc, char *argv[]){
         FullscreenRES.x = DesktopDisplayMode.w;
         FullscreenRES.y = DesktopDisplayMode.h;
 
-        MainWindow = SDL_CreateWindow(SLOTMACHINE_NAME, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, WindowRES.x,WindowRES.y, SDL_WINDOW_SHOWN);
+        MainWindow = SDL_CreateWindow(SLOTMACHINE_NAME, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, WindowRES.x,WindowRES.y, SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE);
         if (MainWindow == NULL){ // Gestion des erreurs (Creation de la fenêtre)
             fprintf(stderr, "Erreur a la creation de la fenêtre : %s\n", SDL_GetError()); // On affiche le message d'erreur s'il y en a un
             exit(-1);
@@ -651,13 +667,11 @@ int main(int argc, char *argv[]){
         SDL_GL_SetSwapInterval(1); // Turn on vsync
 
         if (Fullscreen){
+            ToWideScreen(&FullscreenRES, &ScreenRES, &ScallingOffset);
             SDL_SetWindowFullscreen(MainWindow, SDL_WINDOW_FULLSCREEN_DESKTOP);
-            ScreenRES.x = FullscreenRES.x;
-            ScreenRES.y = FullscreenRES.y;
         }else{
             SDL_SetWindowFullscreen(MainWindow, 0);
-            ScreenRES.x = WindowRES.x;
-            ScreenRES.y = WindowRES.y;
+            ToWideScreen(&WindowRES, &ScreenRES, &ScallingOffset);
         }
 
         // Initialisation du moteur audio en qualité CD 44100Khz, Stereo, 1kb par chunk
@@ -721,11 +735,13 @@ themeini:
 scaleini:
         SDL_QueryTexture(Sign, NULL, NULL, &SignDIM.w, &SignDIM.h);
         ScaleTextureToLinkedPercent(&SignDIM, ScreenRES.x, 30);
-        SignDIM.x = ScreenRES.x - SignDIM.w;
-        SignDIM.y = (ScreenRES.y - SignDIM.h) / 4;
+        SignDIM.x = ScreenRES.x - SignDIM.w + ScallingOffset.x;
+        SignDIM.y = ((ScreenRES.y - SignDIM.h) >> 2) + ScallingOffset.y;
 
         SDL_QueryTexture(Faceplate, NULL, NULL, &Faceplate_DIM.w, &Faceplate_DIM.h); // on récupère la taille de la texture
         Scale(&Faceplate_DIM.h, &Faceplate_DIM.w, ScreenRES.y);
+        Faceplate_DIM.x = ScallingOffset.x;
+        Faceplate_DIM.y = ScallingOffset.y;
 
         SDL_QueryTexture(Digits[0], NULL, NULL, &Digits_DIM.w, &Digits_DIM.h);
         Gains_DIM = (SDL_Rect){Faceplate_DIM.x + (ScreenRES.x * 0.123f), Faceplate_DIM.y + (ScreenRES.y * 0.702f), Digits_DIM.w, Digits_DIM.h};
@@ -748,13 +764,12 @@ scaleini:
         SDL_QueryTexture(Reel, NULL, NULL, &Reel1.w, &ReelSize); // On récupère seulement l'épaisseur de la texture
         Reel1_DIM.w = Reel3.w = Reel2.w = Reel1.w; // On définit les dimensions des trois rouleaux
         Reel1_DIM.h = Reel3.h = Reel2.h = Reel1.h = Reel1.w * 1.5f;
-        Reel3.y = Reel2.y = Reel1.y = ReelOffset.y; // On déffini la position par défaut (offset) des rouleaux
+        Reel3.y = Reel2.y = Reel1.y = ReelOffset.y + ScallingOffset.y; // On déffini la position par défaut (offset) des rouleaux
 
         ScaleTextureToLinkedPercent(&Reel1_DIM, ScreenRES.x, 15.5f);
-        Reel1_DIM = (SDL_Rect){(ScreenRES.x * 0.120f), (ScreenRES.y * 0.215f), Reel1_DIM.w, Reel1_DIM.h};
-        Reel2_DIM = (SDL_Rect){((Faceplate_DIM.w - Reel1_DIM.w) >> 1) , (ScreenRES.y * 0.215f), Reel1_DIM.w, Reel1_DIM.h};
-        Reel3_DIM = (SDL_Rect){(ScreenRES.x * 0.482f), (ScreenRES.y * 0.215f), Reel1_DIM.w, Reel1_DIM.h};
-
+        Reel1_DIM = (SDL_Rect){(ScreenRES.x * 0.120f) + ScallingOffset.x, (ScreenRES.y * 0.215f) + ScallingOffset.y, Reel1_DIM.w, Reel1_DIM.h};
+        Reel2_DIM = (SDL_Rect){((Faceplate_DIM.w - Reel1_DIM.w) >> 1) + ScallingOffset.x, (ScreenRES.y * 0.215f) + ScallingOffset.y, Reel1_DIM.w, Reel1_DIM.h};
+        Reel3_DIM = (SDL_Rect){(ScreenRES.x * 0.482f) + ScallingOffset.x, (ScreenRES.y * 0.215f) + ScallingOffset.y, Reel1_DIM.w, Reel1_DIM.h};
 
         // Snaps the slots into place for the default combination
         snapSlots(&Reel1, ReelOffset.y, ReelOffset.x, SlotIndex[0]);
@@ -893,16 +908,14 @@ P1MISE:
                         break;
                     case SDL_SCANCODE_F:
                         if (Fullscreen){
+                            ToWideScreen(&WindowRES, &ScreenRES, &ScallingOffset);
                             SDL_SetWindowFullscreen(MainWindow, 0);
                             Fullscreen = 0;
-                            ScreenRES.x = WindowRES.x;
-                            ScreenRES.y = WindowRES.y;
                             goto scaleini;
                         }else{
+                            ToWideScreen(&FullscreenRES, &ScreenRES, &ScallingOffset);
                             SDL_SetWindowFullscreen(MainWindow, SDL_WINDOW_FULLSCREEN_DESKTOP);
                             Fullscreen = 1;
-                            ScreenRES.x = FullscreenRES.x;
-                            ScreenRES.y = FullscreenRES.y;
                             goto scaleini;
                         }
                         break;
@@ -924,13 +937,29 @@ P1MISE:
                         }
                     }
                     break;
+                case SDL_WINDOWEVENT:
+                    switch (event.window.event)
+                    {
+                    case SDL_WINDOWEVENT_RESIZED:
+                        WindowRES.x = event.window.data1; // Nouvelle resolution X
+                        WindowRES.y = event.window.data2; // Nouvelle resolution Y
+                        ToWideScreen(&WindowRES, &ScreenRES, &ScallingOffset); // On scale pour que l'affichage reste correct
+                        goto scaleini; // On redimentionne toutes les texture pour correspondre a la nouvelle resolution
+                        break;
+                    
+                    default:
+                        break;
+                    }
+
+                    break;
                 default:
                     break;
                 }
             }
 
             // Affichage des éléments (Back to Front)
-            SDL_RenderCopy(Renderer, BackGround, NULL,  &(SDL_Rect){0, 0, ScreenRES.x, ScreenRES.y}); // On affiche le background
+            SDL_RenderFillRect(Renderer, NULL); // On efface la cible de rendu pour éviter le ghosting avec des résolutions hors aspect ratio
+            SDL_RenderCopy(Renderer, BackGround, NULL,  &(SDL_Rect){ScallingOffset.x, ScallingOffset.y, ScreenRES.x, ScreenRES.y}); // On affiche le background
 
             // On anime les slots
             if (ReelStep[0] > -2){

@@ -23,9 +23,11 @@ typedef struct {
     int h;
 } Vector4i;
 
+// TEMP
 Vector2i FullscreenRES = {1920, 1080};
 Vector2i WindowRES = {1600, 900};
 Vector2i ScreenRES = {1600, 900};
+Vector2i ScallingOffset = {0, 0};
 
 #define NB_OF_THEMES 1
 
