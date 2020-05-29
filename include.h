@@ -16,14 +16,21 @@ typedef struct {
     int y;
 } Vector2i;
 
+typedef struct {
+    int x;
+    int y;
+    int w;
+    int h;
+} Vector4i;
+
 Vector2i FullscreenRES = {1920, 1080};
 Vector2i WindowRES = {1600, 900};
 Vector2i ScreenRES = {1600, 900};
 
 #define NB_OF_THEMES 1
 
-#define LINES 24
-#define COLUMNS 80
+#define LINES 75
+#define COLUMNS 263
 
 // Pour la futur portabilité
 #ifdef LINUX
@@ -32,7 +39,7 @@ Vector2i ScreenRES = {1600, 900};
 #define CLEAR "cls"
 #endif
 
-#define FontPath "Fonts/SlotFont.txt"
+#define FontPath "Fonts/"
 #define ImagePath "Images/"
 #define SoundPath "Sounds/"
 

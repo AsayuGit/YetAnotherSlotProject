@@ -73,19 +73,70 @@ void LoadTabFromFile(int TabY, int TabX, char CardIndex[TabY][TabX], FILE* FileS
     }
 }
 
+// Efface une zone rectangulaire de l'écran
+void clearRegion(int y, int x, int height, int width){
+    height += y;
+    for (; y < height; y++){
+        SetCursorAt(y, x); // On déplace le curseur a l'endoit de l'ecran que l'on veut éffacer
+        for (int i = 0; i < width; i++){
+            printf(" ");
+        }
+    }
+}
+
+// Affiche un fichier texte a l'ecran
+void blitBackgroundToScreen(FILE* FileStream){
+    char tempChar;
+    while ((tempChar = fgetc(FileStream)) != EOF){
+        printf("%c", tempChar);
+    }
+}
+
 void DisplayTab(int TabY, int TabX, char CardIndex[TabY][TabX]){ // Affiche le contenue d'un tableau char**
     for (int i = 0; i < TabY; i++){
         printf("%3d %s",i, CardIndex[i]); // récupère une ligne d'un tableau char**
     }
 }
 
-void DisplayCardAt(int TabY, int TabX, char CardIndex[TabY][TabX], int CardID, int CardYSize, int y, int x, int Delay){ // Affiche une carte a une endroid précis de l'écran
-    for (int i = 0; i < CardYSize; i++){
-        SetCursorAt(y + i, x);
-        printf("%s", CardIndex[(CardID * CardYSize + i)]); // récupère une ligne d'un tableau char**
-        milliSleep(Delay);
+void DisplayCardAt(int TabY, int TabX, char CardIndex[TabY][TabX], int CardID, int CardYSize, int y, int x){ // Affiche une carte a une endroid précis de l'écran
+    int CurrentLine = (CardID * CardYSize); // Ligne a afficher
+    for (int i = 0; i < CardYSize; i++){ // On affiche la carte a l'ecran
+        SetCursorAt(y + i, x); // On déplace le curseur a l'endoit de l'ecran ou l'on veut dessiner la carte
+        printf("%s", CardIndex[CurrentLine]); // récupère une ligne d'un tableau char**
+        CurrentLine++;
     }
 }
+
+void AnimateCard(int TabY, int TabX, char CardIndex[TabY][TabX], int CardID, int CardYSize, int y, int x, int *Offset, int *Steps){ // Affiche une carte a une endroid précis de l'écran
+    (*Offset)++; // On décale l'offset d'un cran
+    int loopbackLimit; // l'endroit on on dois remonter au dessus du tableau
+    
+    if ((*Steps) > 0){// LoopCode
+        loopbackLimit = TabY;
+        if ((*Offset) > loopbackLimit){
+            (*Offset) = 0;
+            (*Steps)--;
+        }
+    }else{
+        loopbackLimit = (CardID * CardYSize); // Arriver précisément au bon endroit
+        if ((*Offset) > loopbackLimit){
+            (*Offset) = (CardID * CardYSize);
+            (*Steps)--;
+        }
+        //(*coordinates).y = stepOffset * newID + originOffset;
+    }
+
+    int CurrentLine; // Ligne a afficher
+    for (int i = 0; i < CardYSize; i++){ // On affiche la carte a l'ecran
+        SetCursorAt(y + i, x); // On déplace le curseur a l'endoit de l'ecran ou l'on veut dessiner la carte
+        CurrentLine = (*Offset) + i;
+        if (CurrentLine >= TabY){
+            CurrentLine -= TabY;
+        }
+        printf("%s", CardIndex[CurrentLine]); // récupère une ligne d'un tableau char**
+    }
+}
+
 
 SDL_Texture* loadImage(const char path[], SDL_Renderer* renderer){
     // Nottre surface temporaire pour le chargement des textures
@@ -155,7 +206,7 @@ void animateSlots(SDL_Rect * coordinates,int originOffset, int stepOffset, int n
     }else{
         loopbackLimit = stepOffset * newID + originOffset; // Arriver précisément au bon endroit
         if ((*coordinates).y > loopbackLimit){
-            (*coordinates).y = stepOffset * newID + originOffset;
+            (*coordinates).y = stepOffset * newID + originOffset; // TEMP
             (*Steps)--;
         }
         //(*coordinates).y = stepOffset * newID + originOffset;
@@ -164,7 +215,8 @@ void animateSlots(SDL_Rect * coordinates,int originOffset, int stepOffset, int n
     //printf("%d\n", (*coordinates).y);
 }
 
-void tirage(int * Gains, int Mise, char TabDeck[], int SlotIndex[], int WinRewards[], char Mode){
+void tirage(int * Gains, int Mise, char TabDeck[], int SlotIndex[], int WinRewards[], char *BJackpot, char Mode, char Lucky){
+    (*BJackpot) = 0;
     // Génération aléatoire des slots (tirage)
     for (int i = 0; i < 3; i++){
         SlotIndex[i] = rand()%NBL; // int
@@ -173,10 +225,18 @@ void tirage(int * Gains, int Mise, char TabDeck[], int SlotIndex[], int WinRewar
     // Recherche de la valeur du gain
     *Gains = 0;
     // Luck manipulation (for debug purposes)
-    /*
-    SlotIndex[0] = 2;
-    SlotIndex[1] = 6;
-    SlotIndex[2] = 2;*/
+    if (Lucky){
+        
+        if (Mode){
+            SlotIndex[0] = 1;
+            SlotIndex[1] = 1;
+            SlotIndex[2] = 1;
+        }else{
+            SlotIndex[0] = 5;
+            SlotIndex[1] = 5;
+            SlotIndex[2] = 5;
+        }
+    }
 
     if (Mode){ // Casino mode
         // "Any color" combination
@@ -221,6 +281,7 @@ void tirage(int * Gains, int Mise, char TabDeck[], int SlotIndex[], int WinRewar
                 *Gains = WinRewards[11] * Mise; //printf("Nya 13\n");
             }else{
                 *Gains = WinRewards[12];
+                (*BJackpot) = 1;
             }
         }
     }else{ // Texte mode
@@ -264,6 +325,7 @@ void tirage(int * Gains, int Mise, char TabDeck[], int SlotIndex[], int WinRewar
                 *Gains = WinRewards[11] * Mise;
             }else{
                 *Gains = WinRewards[12];
+                (*BJackpot) = 1;
             }
         }
     }
@@ -290,16 +352,19 @@ void ScaleTextureToLinkedPercent(SDL_Rect *Dimensions, int LinkedRes, float Perc
 int main(int argc, char *argv[]){
     // Déclaration des variables principales
     int Gains = 0, GuiGains = 0, Credits = 0, Mise = 0, MaxMise = 3, BankIN = 0, LastMise = 0;
-    char GUI = 1, ReturnStatus = 0, TextInput = 1; // Booléen de sélection (char car il n'a besoin que d'etre 0 ou 1)
+    char GUI = 1, ReturnStatus = 0, TextInput = 1, BJackpot = 0, Luck = 0; // Booléen de sélection (char car il n'a besoin que d'etre 0 ou 1)
 
     char TabDeck[NBL] = "BELNOSI"; // 0 -> 5 Les lettres qui peuvent tomber
     int WinRewards[WIN] = {1, 2, 5, 10, 20, 40, 50, 100, 200, 300, 400, 4000, 20000}; // Les gains associés
-    int SlotIndex[3] = {2, 4, 2}; // Index de la combinaison par défaut
+    int SlotIndex[3] = {2, 4, 2}; // Index de la combinaison
 
     FILE* SlotFont = NULL; // Notre fichier contenant les "Polices" a blit dans la console
+    FILE* TextBackground = NULL; // La borne en mode texte
     Vector2i SlotSize; SlotSize.x = 0; SlotSize.y = 0;
+    Vector2i TextSlot1Pos, TextSlot2Pos, TextSlot3Pos;
+    Vector4i TextTerminalDimensions;
     int CardSize = 0;
-    int TextCardDrawDelay = 0; // Contiendras le délais ligne a ligne de l'affichage d'une carte quand une combinaison est tiré
+    int Card1DrawOffset = -1, Card2DrawOffset = -1, Card3DrawOffset = -1; // Contiendras le décalage de l'affichage d'une carte quand une combinaison est tiré (Animation)
     float ReelSpeed = 200.0f; // Contient la vitesse de rotation des rouleaux
     int ReelStep[3] = {-2, -2, -2}; // Contient le nombre de tours a effectuer // -2 signifie pas d'animation
     int ReelSize = 0; // Taille verticale de la texture des slots (Utilisé pour leurs animation)
@@ -347,6 +412,7 @@ int main(int argc, char *argv[]){
     Mix_Chunk *coinIn = NULL;
     Mix_Chunk *coinIn2 = NULL;
     Mix_Chunk *coinIn3 = NULL;
+    Mix_Chunk *Jackpot = NULL;
     Mix_Chunk *spin = NULL;
     Mix_Music *backgroundMusic = NULL; // Musique de fond
     Mix_Music *neoBGM = NULL; // BGM 80s
@@ -365,6 +431,8 @@ int main(int argc, char *argv[]){
                 rewardMode = 0;
             } else if (strcmp(argv[i], "-w") == 0){
                 Fullscreen = 0;
+            } else if (strcmp(argv[i], "-Lucky") == 0){ // Pour obtenir des Jackpot a tout les coups
+                Luck = 1;
             } else if (strcmp(argv[i], "-t") == 0){ // Theme selector
                 if (argc > i+1){ // s'il y a un argument après -t
                     selectedTheme = atoi(argv[++i]);
@@ -441,29 +509,120 @@ int main(int argc, char *argv[]){
                         "           5 = 640*360 SD(16/9)\n"
                         "-cr   : Change la résolution en mode fenétré par une résolution au choix\n"
                         "           (Gardez en tête que ce jeu a été conçu pour un affichage en 16/9     )\n"
-                        "           (et qu'un ratio d'aspect différent peut causer des disfonctionnements)\n\n"
-                        "-h ou --help : Affiche ce menu d'aide\n\n"
-                        "Credits : RAIMBAUD Killian & TOUGARD Enzo / 2020\n");
+                        "           (et qu'un ratio d'aspect différent peut causer des disfonctionnements)\n"
+                        "-Lucky: Permet d'obtenir une chance infini\n"
+                        "\n-h ou --help : Affiche ce menu d'aide\n"
+                        "\nCredits : RAIMBAUD Killian & TOUGARD Enzo / 2020\n");
                 exit(0);
             }
         }
     }
 
-    if ((SlotFont = fopen(FontPath, "r")) == NULL){
-        fprintf(stderr, "Erreur au chargement des cartes\n");
-        exit(-1);
-    }
-    fscanf(SlotFont, "%d %d", &SlotSize.x, &SlotSize.y); fseek(SlotFont, 1, SEEK_CUR);
-    SlotSize.x += 2; // +1 \n +1 \0
-    CardSize = SlotSize.y;
-    SlotSize.y *= NBL; // on a la taille d'une carte on veut toutes les cartes
+    if (!GUI){ // If in console mode
 
-    char CardIndex[SlotSize.y][SlotSize.x]; // On déclare un tableau pouvant contenir toutes les cartes
-    LoadTabFromFile(SlotSize.y, SlotSize.x, CardIndex, SlotFont); // On charge nottre fichier dans notre tableau
+        switch (selectedTheme){
+            case 0: // BELNOSA
+                if ((SlotFont = fopen(FontPath"BIGSlotFont.txt", "r")) == NULL){
+                    fprintf(stderr, "Erreur au chargement des cartes\n");
+                    exit(-1);
+                }
+                break;
+            case 1: // DICE
+                if ((SlotFont = fopen(FontPath"DICESlotFont.txt", "r")) == NULL){
+                    fprintf(stderr, "Erreur au chargement des cartes\n");
+                    exit(-1);
+                }
+                break;
+        }
+        fscanf(SlotFont, "%d %d", &SlotSize.x, &SlotSize.y); fseek(SlotFont, 1, SEEK_CUR);
+        SlotSize.x += 2; // +1 '\n' +1 '\0'
+        CardSize = SlotSize.y;
+        SlotSize.y *= NBL; // on a la taille d'une carte on veut toutes les cartes
 
-    SetConsoleSize(LINES, COLUMNS); // On standardise la taille de la console affin d'éviter les problèmes d'affichage
+        if ((TextBackground = fopen("Fonts/TextBackground.txt", "r")) == NULL){
+            fprintf(stderr, "Erreur au chargement de la borne (Texte)\n");
+            exit(-1);
+        }
+        fscanf(TextBackground, "%d %d", &TextSlot1Pos.x, &TextSlot1Pos.y); fseek(TextBackground, 1, SEEK_CUR);
+        fscanf(TextBackground, "%d %d", &TextSlot2Pos.x, &TextSlot2Pos.y); fseek(TextBackground, 1, SEEK_CUR);
+        fscanf(TextBackground, "%d %d", &TextSlot3Pos.x, &TextSlot3Pos.y); fseek(TextBackground, 1, SEEK_CUR);
+        fscanf(TextBackground, "%d %d %d %d", &TextTerminalDimensions.x, &TextTerminalDimensions.y, &TextTerminalDimensions.w, &TextTerminalDimensions.h); fseek(TextBackground, 1, SEEK_CUR);
 
-    if (GUI){ // A effectuer seulement si l'utilisateur a choisi une gui
+        char CardIndex[SlotSize.y][SlotSize.x]; // On déclare un tableau pouvant contenir toutes les cartes
+        LoadTabFromFile(SlotSize.y, SlotSize.x, CardIndex, SlotFont); // On charge nottre fichier dans notre tableau
+
+        SetConsoleSize(LINES, COLUMNS); // On standardise la taille de la console affin d'éviter les problèmes d'affichage
+
+        system(CLEAR);
+        blitBackgroundToScreen(TextBackground);
+        DisplayCardAt(SlotSize.y, SlotSize.x, CardIndex, SlotIndex[0], CardSize, TextSlot1Pos.y, TextSlot1Pos.x); // Card 1
+        DisplayCardAt(SlotSize.y, SlotSize.x, CardIndex, SlotIndex[1], CardSize, TextSlot2Pos.y, TextSlot2Pos.x); // Card 2
+        DisplayCardAt(SlotSize.y, SlotSize.x, CardIndex, SlotIndex[2], CardSize, TextSlot3Pos.y, TextSlot3Pos.x); // Card 3
+
+            
+        while (1){ // Main loop (TextMode)
+
+            if (ReelStep[0] >= 0){
+                AnimateCard(SlotSize.y, SlotSize.x, CardIndex, SlotIndex[0], CardSize, TextSlot1Pos.y, TextSlot1Pos.x, &Card1DrawOffset, &ReelStep[0]); // Card 1
+            }
+            
+            if (ReelStep[1] >= 0){
+                AnimateCard(SlotSize.y, SlotSize.x, CardIndex, SlotIndex[1], CardSize, TextSlot2Pos.y, TextSlot2Pos.x, &Card2DrawOffset, &ReelStep[1]); // Card 2
+            } 
+            if (ReelStep[2] >= 0){
+                AnimateCard(SlotSize.y, SlotSize.x, CardIndex, SlotIndex[2], CardSize, TextSlot3Pos.y, TextSlot3Pos.x, &Card3DrawOffset, &ReelStep[2]); // Card 3
+            }
+            milliSleep(3);
+
+            if ((ReelStep[0] < 0) && (ReelStep[1] < 0) && (ReelStep[2] < 0)){ // Si les rouleaux on fini de s'animer
+                // On Affiche les cartes du précédent tirage
+                clearRegion(TextTerminalDimensions.y, TextTerminalDimensions.x, TextTerminalDimensions.h, TextTerminalDimensions.w);
+                SetCursorAt(TextTerminalDimensions.y + 1, TextTerminalDimensions.x + (TextTerminalDimensions.w >> 1) - 21);
+                printf("Gains : %5d | Credits : %5d | Mise : %1d\n", Gains, Credits, Mise); // Header
+                
+                if (Credits == 0){ // BankIN (Fin de partie / Début de partie quand les crédits tombent a 0)
+                    SetCursorAt(TextTerminalDimensions.y + 3, TextTerminalDimensions.x + (TextTerminalDimensions.w >> 1) - 23);
+                    printf("Veuiller insérer des credits pour continuer : ");
+                    BankIN = 0;
+                    while (BankIN <= 0){ // Saisie sécurisé
+                        while (scanf("%d", &BankIN) == 0){
+                            clearInputBuffer();
+                        }
+                    }
+                    Credits += BankIN;
+                }else { // Sloot Loop
+                    if (Credits < 3){ // On calcul la mise maximum affin d'éviter que l'utilisateur mise plus que ce qu'il a crédité
+                        MaxMise = Credits;
+                    }else {
+                        MaxMise = 3;
+                    }
+                    SetCursorAt(TextTerminalDimensions.y + 3, TextTerminalDimensions.x + (TextTerminalDimensions.w >> 1) - 26);
+                    printf("Veuiller entrer la mise (1 - %d) 0 pour encaisser : ", MaxMise);
+                    Mise = -1;
+                    while ((Mise < 0) || (Mise > MaxMise)){ // Saisie sécurisé
+                        while (scanf("%d", &Mise) == 0){
+                            clearInputBuffer();
+                        }
+                    }
+                    if (Mise != 0){
+                        Credits -= Mise;
+                    }else{
+                        goto Shutdown;//exit(0); // L'utilisateur a choisi de repartir avec ses crédits
+                    }
+                    if (Credits < 0){ // On évité de passer dans les négatifs
+                        Credits = 0;
+                    }
+
+                    // SlotMachine Logic
+                    tirage(&Gains, Mise, TabDeck, SlotIndex, WinRewards, &BJackpot, 0, Luck); // tirage des combinaisons // RewardMode de 0 = Combinaison Terminal Friendly
+                    ReelStep[0] = 1; ReelStep[1] = 3; ReelStep[2] = 5; // On anime les rouleaux
+                    Credits += Gains;
+                }
+            }
+        }
+
+    } else { // if in GUI MODE
+
         // Initialisations liée a la SDL
         if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO) != 0){ // initialisation de la sdl + Gestion des erreurs
             fprintf(stderr, "Erreur a l'initialisation de la SDL : %s\n", SDL_GetError()); // On affiche le message d'erreur s'il y en a un
@@ -529,6 +688,7 @@ int main(int argc, char *argv[]){
         coinIn = loadSoundEffect(SoundPath"payout1.wav");
         coinIn2 = loadSoundEffect(SoundPath"payout2.wav");
         coinIn3 = loadSoundEffect(SoundPath"payout3.wav");
+        Jackpot = loadSoundEffect(SoundPath"Jackpot.wav");
         spin = loadSoundEffect(SoundPath"spin.wav");
 
         // Musics
@@ -601,62 +761,8 @@ scaleini:
         snapSlots(&Reel2, ReelOffset.y, ReelOffset.x, SlotIndex[1]);
         snapSlots(&Reel3, ReelOffset.y, ReelOffset.x, SlotIndex[2]);
 
-        //SDL_StartTextInput(); // On active l'entré texte par défaut car la machine a sou ne contient pas de crédits au démarrage
-    }
-
-    while (1){ // Main loop
-
-        if (!GUI){ // If in console mode
-            system(CLEAR); // Clear the console
-
-            // On Affiche les cartes du précédent tirage
-            DisplayCardAt(SlotSize.y, SlotSize.x, CardIndex, SlotIndex[0], CardSize, 2, 10, TextCardDrawDelay); // Card 1
-            DisplayCardAt(SlotSize.y, SlotSize.x, CardIndex, SlotIndex[1], CardSize, 2, SlotSize.x + 10, TextCardDrawDelay); // Card 2
-            DisplayCardAt(SlotSize.y, SlotSize.x, CardIndex, SlotIndex[2], CardSize, 2, 2*SlotSize.x + 10, TextCardDrawDelay); // Card 3
-
-            TextCardDrawDelay = 0;
-
-            SetCursorAt(CardSize + 4, 25);
-            printf("Gains : %d | Credits : %d | Mise : %d\n", Gains, Credits, Mise); // Header
-            
-            if (Credits == 0){ // BankIN (Fin de partie / Début de partie quand les crédits tombent a 0)
-                printf("\nVeuiller insérer des credits pour continuer : ");
-                BankIN = 0;
-                while (BankIN <= 0){ // Saisie sécurisé
-                    while (scanf("%d", &BankIN) == 0){
-                        clearInputBuffer();
-                    }
-                }
-                Credits += BankIN;
-            }else { // Sloot Loop
-                if (Credits < 3){ // On calcul la mise maximum affin d'éviter que l'utilisateur mise plus que ce qu'il a crédité
-                    MaxMise = Credits;
-                }else {
-                    MaxMise = 3;
-                }
-                printf("\nVeuiller entrer la mise (1 - %d) 0 pour encaisser : ", MaxMise);
-                Mise = -1;
-                while ((Mise < 0) || (Mise > MaxMise)){ // Saisie sécurisé
-                    while (scanf("%d", &Mise) == 0){
-                        clearInputBuffer();
-                    }
-                }
-                if (Mise != 0){
-                    Credits -= Mise;
-                }else{
-                    exit(0); // L'utilisateur a choisi de repartir avec ses crédits
-                }
-                if (Credits < 0){ // On évité de passer dans les négatifs
-                    Credits = 0;
-                }
-
-                // SlotMachine Logic
-                tirage(&Gains, Mise, TabDeck, SlotIndex, WinRewards, rewardMode); // tirage des combinaisons
-                TextCardDrawDelay = 50; // On délais l'affichage des cartes au tirage affin d'avoir un semblant d'annimation
-                Credits += Gains;
-            }
-        } else { // if in GUI MODE
-            
+        while (1){ // Main loop (Gui Mode)
+        
             // Permet de savoir depuis combien de temps le program s'execute ainsi que le /\ d'une frame
             oldTime = time;
             time = SDL_GetTicks();
@@ -699,7 +805,7 @@ PLAY:
                                 }else{
                                     LastMise = Mise;
                                 }
-                                tirage(&GuiGains, Mise, TabDeck, SlotIndex, WinRewards, rewardMode); // tirage des combinaisons
+                                tirage(&GuiGains, Mise, TabDeck, SlotIndex, WinRewards, &BJackpot, rewardMode, Luck); // tirage des combinaisons
                                 ReelStep[0] = 5; ReelStep[1] = 7; ReelStep[2] = 9; // On anime les rouleaux
                                 Mix_PlayChannel(-1, spin, 0); // On joue le son du tirage -1 pour laisser la sdl choisir le channel
                                 Mise = 0;
@@ -826,7 +932,7 @@ P1MISE:
             // Affichage des éléments (Back to Front)
             SDL_RenderCopy(Renderer, BackGround, NULL,  &(SDL_Rect){0, 0, ScreenRES.x, ScreenRES.y}); // On affiche le background
 
-            // On affiche les slots
+            // On anime les slots
             if (ReelStep[0] > -2){
                 animateSlots(&Reel1, ReelOffset.y, ReelOffset.x, SlotIndex[0], ReelSpeed, &ReelStep[0]);
             }
@@ -840,6 +946,9 @@ P1MISE:
             if ((ReelStep[0] == -2) && (ReelStep[1] == -2) && (ReelStep[2] == -2)){
                 if (Mix_Playing(-1) != 0){
                     Mix_HaltChannel(-1);
+                }
+                if (BJackpot){ // Si JackPot
+                    Mix_PlayChannel(-1, Jackpot, 0); // On joue le son du tirage -1 pour laisser la sdl choisir le channel
                 }
                 ReelStep[0] = ReelStep[1] = ReelStep[2] = -3;
                 Gains = GuiGains;
@@ -878,9 +987,7 @@ P1MISE:
     }
 
 Shutdown:
-    fclose(SlotFont);
     if (GUI){
-        
         // On libère les texture du programme
         SDL_DestroyTexture(NeoPlate);
         SDL_DestroyTexture(Buttons);
@@ -907,6 +1014,10 @@ Shutdown:
         SDL_DestroyRenderer(Renderer); // On détruit le renderer
         SDL_DestroyWindow(MainWindow); // On détruit la fenêtre
         SDL_Quit(); // On quitte la SDL avant de quitter notre programme
+    }else{
+        fclose(SlotFont);
+        fclose(TextBackground);
+        system(CLEAR);
     }
 
     return ReturnStatus;
