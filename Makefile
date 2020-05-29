@@ -1,11 +1,13 @@
-all:
-	gcc -o main main.c $$(sdl2-config --cflags --libs) -lSDL2_mixer -Wall
+CreateDirectories:
+	mkdir -p YASP
 
-run:
-	gcc -o main main.c $$(sdl2-config --cflags --libs) -lSDL2_mixer -Wall && ./main
+all: CreateDirectories
+	gcc -o YASP/yasp src/main.c $$(sdl2-config --cflags --libs) -lSDL2_mixer -Wall
 
-runSDL:
-	gcc -o main main.c $$(sdl2-config --cflags --libs) -lSDL2_mixer -Wall && ./main -SDL
+copy:
+	cp -r assets/* YASP/
+
+install: all copy
 
 clean:
 	rm main
