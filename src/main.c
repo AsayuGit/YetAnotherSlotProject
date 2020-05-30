@@ -86,6 +86,9 @@ int main(int argc, char *argv[]){
                 rewardMode = 0;
             } else if (strcmp(argv[i], "-w") == 0){
                 Fullscreen = 0;
+            } else if (strcmp(argv[i], "-p") == 0){
+                printf("%s\n", argv[0]);
+                exit(0);
             } else if (strcmp(argv[i], "-Lucky") == 0){ // Pour obtenir des Jackpot a tout les coups
                 Luck = 1;
             } else if (strcmp(argv[i], "-t") == 0){ // Theme selector
@@ -194,7 +197,7 @@ int main(int argc, char *argv[]){
         CardSize = SlotSize.y;
         SlotSize.y *= NBL; // on a la taille d'une carte on veut toutes les cartes
 
-        if ((TextBackground = fopen("Fonts/TextBackground.txt", "r")) == NULL){
+        if ((TextBackground = fopen(FontPath"TextBackground.txt", "r")) == NULL){
             fprintf(stderr, "Erreur au chargement de la borne (Texte)\n");
             exit(-1);
         }

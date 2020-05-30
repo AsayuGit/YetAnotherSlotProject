@@ -1,0 +1,3 @@
+#!/bin/bash
+cd $(dirname $0)/../games/YASP/
+exec $(pwd)/yasp "$@"
