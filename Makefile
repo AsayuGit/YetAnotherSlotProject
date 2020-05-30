@@ -23,5 +23,8 @@ uninstall:
 	rm /usr/local/bin/yasp
 	rm /usr/share/applications/YASP.desktop
 
+dependencies:
+	apt install libsdl2-dev libsdl2-mixer-dev libsdl2-image-dev
+
 clean:
 	rm main
