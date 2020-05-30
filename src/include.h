@@ -5,34 +5,24 @@
 #include <stdio.h>
 #include <time.h>
 #include <string.h>
-//#include <unistd.h>
+
+#include "types.h"
+
+#include "GLOBAL_Functions.h"
+#include "TEXT_Functions.h"
+#include "SDL_Functions.h"
 
 #define LINUX // Target os
 
 #define SLOTMACHINE_NAME "YetAnotherSlotProject"
 
-typedef struct {
-    int x;
-    int y;
-} Vector2i;
-
-typedef struct {
-    int x;
-    int y;
-    int w;
-    int h;
-} Vector4i;
-
-// TEMP
-Vector2i FullscreenRES = {1920, 1080};
-Vector2i WindowRES = {1600, 900};
-Vector2i ScreenRES = {1600, 900};
-Vector2i ScallingOffset = {0, 0};
-
 #define NB_OF_THEMES 1
 
 #define LINES 75
 #define COLUMNS 263
+
+#define NBL 7
+#define WIN 13
 
 // Pour la futur portabilité
 #ifdef LINUX

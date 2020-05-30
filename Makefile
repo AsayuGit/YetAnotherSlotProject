@@ -1,13 +1,15 @@
+all: build copy
+
+build: CreateDirectories
+	cd ./build; gcc -c ../src/*.c; gcc -o ../YASP/yasp *.o $$(sdl2-config --cflags --libs) -lSDL2_mixer -Wall
+
 CreateDirectories:
-	mkdir -p YASP
+	mkdir -p YASP build
 
-all: CreateDirectories
-	gcc -o YASP/yasp src/main.c $$(sdl2-config --cflags --libs) -lSDL2_mixer -Wall
-
-copy:
+copy: CreateDirectories
 	cp -r assets/* YASP/
 
-install: all copy
+install: all
 
 clean:
 	rm main
