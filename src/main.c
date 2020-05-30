@@ -322,23 +322,23 @@ int main(int argc, char *argv[]){
             exit(-1);
         }
 
-        neoBG = loadImage(ImagePath"NeoBackGround.bmp", Renderer);
-        casinoBG = loadImage(ImagePath"casinoBG1.bmp", Renderer); // Temporary
-        NeoSign = loadImage(ImagePath"neoSign2.bmp", Renderer);
-        casinoSign = loadImage(ImagePath"casinoSign.bmp", Renderer);
-        NeoPlate = loadImage(ImagePath"NeoPlate.bmp", Renderer);
-        CasinoPlate = loadImage(ImagePath"casinoPlate.bmp", Renderer);
+        neoBG = loadImage(ImagePath"NeoBackGround.png", Renderer);
+        casinoBG = loadImage(ImagePath"casinoBG1.png", Renderer); // Temporary
+        NeoSign = loadImage(ImagePath"neoSign2.png", Renderer);
+        casinoSign = loadImage(ImagePath"casinoSign.png", Renderer);
+        NeoPlate = loadImage(ImagePath"NeoPlate.png", Renderer);
+        CasinoPlate = loadImage(ImagePath"casinoPlate.png", Renderer);
 
         for (int i = 0; i < 10; i++){
             char filename[11 + sizeof(ImagePath)]; // On aloue un buffer pour contenir le nom du fichier a charger
-            sprintf(filename,ImagePath"digit%d.bmp", i);
+            sprintf(filename,ImagePath"digit%d.png", i);
             Digits[i] = loadImage(filename, Renderer);
         }
 
-        Buttons = loadImage(ImagePath"buttons3.bmp", Renderer);
-        NeoReel = loadImage(ImagePath"reelNEO.bmp", Renderer);
-        casinoReel = loadImage(ImagePath"reel.bmp", Renderer);
-        Shadow = loadImage(ImagePath"shadow.bmp", Renderer);
+        Buttons = loadImage(ImagePath"buttons3.png", Renderer);
+        NeoReel = loadImage(ImagePath"reelNEO.png", Renderer);
+        casinoReel = loadImage(ImagePath"reel.png", Renderer);
+        Shadow = loadImage(ImagePath"shadow.png", Renderer);
 
         // Sound effects
         coinIn = loadSoundEffect(SoundPath"payout1.wav");
@@ -349,7 +349,7 @@ int main(int argc, char *argv[]){
 
         // Musics
         casinoBGM = loadMusic(SoundPath"Halos of Eternity.ogg");
-        neoBGM = loadMusic(SoundPath"tokyo-rose.wav");
+        neoBGM = loadMusic(SoundPath"tokyo-rose.ogg");
 themeini:
         // Theme specific initialisation
         switch (selectedTheme){

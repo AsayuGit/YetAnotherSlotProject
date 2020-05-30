@@ -2,7 +2,7 @@
 
 SDL_Texture* loadImage(const char path[], SDL_Renderer* renderer){
     // Nottre surface temporaire pour le chargement des textures
-    SDL_Surface* LoadingSurface = SDL_LoadBMP(path); // On charge le fichier en mémoire
+    SDL_Surface* LoadingSurface = IMG_Load(path); // On charge le fichier en mémoire
     SDL_Texture* ReturnTexture = NULL;
     if (LoadingSurface == NULL){
         fprintf(stderr, "Erreur chargement surface : %s\n", SDL_GetError());
@@ -14,7 +14,6 @@ SDL_Texture* loadImage(const char path[], SDL_Renderer* renderer){
         exit(-1);
     }
     SDL_FreeSurface(LoadingSurface); // On libère la mémoire
-
     return ReturnTexture;
 }
 

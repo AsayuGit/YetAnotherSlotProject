@@ -1,7 +1,7 @@
 all: build copy
 
 build: CreateDirectories
-	cd ./build; gcc -c ../src/*.c; gcc -o ../YASP/yasp *.o $$(sdl2-config --cflags --libs) -lSDL2_mixer -Wall
+	cd ./build; gcc -c ../src/*.c; gcc -o ../YASP/yasp *.o $$(sdl2-config --cflags --libs) -lSDL2_mixer -lSDL2_image -Wall
 
 CreateDirectories:
 	mkdir -p YASP build

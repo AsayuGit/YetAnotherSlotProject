@@ -5,6 +5,7 @@
 
 #include <SDL2/SDL.h> // Main sdl Header
 #include <SDL2/SDL_mixer.h> // Audio support
+#include <SDL2/SDL_image.h> // Png support
 
 // Charge une image dans une texture
 SDL_Texture* loadImage(const char path[], SDL_Renderer* renderer);
