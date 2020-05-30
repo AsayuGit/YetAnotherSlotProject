@@ -1,8 +1,8 @@
 [Desktop Entry]
 Name=YetAnotherSlotProject
 Exec=yasp
-Icon=yasp
+Icon=/usr/local/games/YASP/yasp.png
 Type=Application
 Categories=Game;
 Comment=Toujours et encore un simulateur de machine a sous, mais celui-ci est special :3
-Terminal=true
+Terminal=false

@@ -16,10 +16,12 @@ cleanup:
 install:
 	cp -r YASP /usr/local/games
 	cp misc/yasp /usr/local/bin; chmod +x /usr/local/bin/yasp
+	cp misc/YASP.desktop /usr/share/applications
 
 uninstall:
 	rm -rf /usr/local/games/YASP
 	rm /usr/local/bin/yasp
+	rm /usr/share/applications/YASP.desktop
 
 clean:
 	rm main
