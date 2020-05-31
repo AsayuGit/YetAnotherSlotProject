@@ -50,7 +50,7 @@ Notes:
 
     yasp se lance par défaut en mode plein ecran a la résolution native de celui-ci
 
-    La version terminal a été conçu pour un terminal de résolution 75 Lignes * 263 Colones,
+    La version terminal a été conçu pour un terminal de résolution 77 Lignes * 263 Colones,
     veuillez ajuster votre terminal en conséquence
 
     Vous avez perdu votre chance légendaire et n'arrivez pas a décrocher un Jackpot ?

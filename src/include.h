@@ -18,7 +18,7 @@
 
 #define NB_OF_THEMES 1
 
-#define LINES 75
+#define LINES 77
 #define COLUMNS 263
 
 #define NBL 7
