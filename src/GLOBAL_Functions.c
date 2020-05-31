@@ -120,26 +120,26 @@ void tirage(int * Gains, int Mise, char TabDeck[], int SlotIndex[], int WinRewar
         // "Any" combination
         if ((SlotIndex[0] == SlotIndex[1]) && (SlotIndex[0] == SlotIndex[2])){ // Any same
             *Gains = WinRewards[9] * Mise;
-        } else if (((nbOfOcurences(SlotIndex, 6, 3) == 1) && (nbOfOcurences(SlotIndex, 1, 3) == 0) && (nbOfOcurences(SlotIndex, 4, 3) == 0)) || ((nbOfOcurences(SlotIndex, 1, 3) == 1) && (nbOfOcurences(SlotIndex, 6, 3) == 0) && (nbOfOcurences(SlotIndex, 4, 3) == 0)) || ((nbOfOcurences(SlotIndex, 4, 3) == 1) && (nbOfOcurences(SlotIndex, 1, 3) == 0) && (nbOfOcurences(SlotIndex, 6, 3) == 0))){ // Any one vowel
-            *Gains = WinRewards[1] * Mise;
-        } // 6 1 4 
+        }
         
         // Half specific combination
         if (intUni(SlotIndex, (int[3]){3, 1, 0}, 3)){ // Any mixed NEB
             *Gains = WinRewards[6] * Mise;
         } else if (nbOfOcurences(SlotIndex, 5, 3) == 2){ // Any two S
-            *Gains = WinRewards[7] * Mise;
-        } else if (nbOfOcurences(SlotIndex, 5, 3) == 1){ // Any one S
             *Gains = WinRewards[4] * Mise;
+        } else if (((nbOfOcurences(SlotIndex, 6, 3) == 1) && (nbOfOcurences(SlotIndex, 1, 3) == 0) && (nbOfOcurences(SlotIndex, 4, 3) == 0)) || ((nbOfOcurences(SlotIndex, 1, 3) == 1) && (nbOfOcurences(SlotIndex, 6, 3) == 0) && (nbOfOcurences(SlotIndex, 4, 3) == 0)) || ((nbOfOcurences(SlotIndex, 4, 3) == 1) && (nbOfOcurences(SlotIndex, 1, 3) == 0) && (nbOfOcurences(SlotIndex, 6, 3) == 0))){ // Any one vowel
+            *Gains = WinRewards[2] * Mise;
+        } else if (nbOfOcurences(SlotIndex, 5, 3) == 1){ // Any one S
+            *Gains = WinRewards[1] * Mise;
         }
 
         // Specific combinaition
         if (intcmp(SlotIndex, (int[3]){2, 4, 2}, 3)){ // LOL
-            *Gains = WinRewards[1] * Mise;
+            *Gains = WinRewards[7] * Mise;
         } else if (intcmp(SlotIndex, (int[3]){0, 6, 2}, 3)){ // Bal
             *Gains = WinRewards[2] * Mise;
         } else if (intcmp(SlotIndex, (int[3]){0, 1, 2}, 3)){ // Bel
-            *Gains = WinRewards[2] * Mise;
+            *Gains = WinRewards[0] * Mise;
         } else if (intcmp(SlotIndex, (int[3]){3, 1, 2}, 3)){ // Nel (Bleach)
             *Gains = WinRewards[3] * Mise;
         } else if (intcmp(SlotIndex, (int[3]){0, 4, 3}, 3)){ // Bon
