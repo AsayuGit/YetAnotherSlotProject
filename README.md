@@ -53,6 +53,9 @@ Notes:
     La version terminal a été conçu pour un terminal de résolution 75 Lignes * 263 Colones,
     veuillez ajuster votre terminal en conséquence
 
+    Vous avez perdu votre chance légendaire et n'arrivez pas a décrocher un Jackpot ?
+    Utilisez l'option -Lucky et devenez le meuilleur joueur de machine a sous du monde !
+
     Keybindings SDL:
 
         Pavénum     : Entrer montant de crédits
