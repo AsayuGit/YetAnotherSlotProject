@@ -30,8 +30,6 @@
 #include "TEXT_Functions.h"
 #include "SDL_Functions.h"
 
-#define LINUX // Target os
-
 #define SLOTMACHINE_NAME "YetAnotherSlotProject"
 
 #define NB_OF_THEMES 1
@@ -43,10 +41,14 @@
 #define WIN 13
 
 // Pour la futur portabilité
-#ifdef LINUX
+#ifndef WINDOWS
 #define CLEAR "clear"
-#elif WINDOWS
+#define SOUNDVOLUME 64
+#define EFFECTVOLUME 64
+#else
 #define CLEAR "cls"
+#define SOUNDVOLUME 10
+#define EFFECTVOLUME 20
 #endif
 
 #define FontPath "Fonts/"

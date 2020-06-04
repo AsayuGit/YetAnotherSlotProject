@@ -1,0 +1,1 @@
+windres ./misc/icon.rc -O coff -o ./build/icon.res

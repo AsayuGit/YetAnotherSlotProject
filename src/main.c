@@ -34,7 +34,7 @@ int main(int argc, char *argv[]){
     Vector4i TextTerminalDimensions;
     int CardSize = 0;
     int Card1DrawOffset = -1, Card2DrawOffset = -1, Card3DrawOffset = -1; // Contiendras le décalage de l'affichage d'une carte quand une combinaison est tiré (Animation)
-    float ReelSpeed = 200.0f; // Contient la vitesse de rotation des rouleaux
+    float ReelSpeed = 12.5f; // Contient la vitesse de rotation des rouleaux
     int ReelStep[3] = {-2, -2, -2}; // Contient le nombre de tours a effectuer // -2 signifie pas d'animation
     int ReelSize = 0; // Taille verticale de la texture des slots (Utilisé pour leurs animation)
 
@@ -185,7 +185,7 @@ int main(int argc, char *argv[]){
                         "           5 = 640*360 SD(16/9)\n"
                         "-cr   : Change la résolution en mode fenétré par une résolution au choix\n"
                         "           (Gardez en tête que ce jeu a été conçu pour un affichage en 16/9     )\n"
-                        "           (et qu'un ratio d'aspect différent peut causer des disfonctionnements)\n"
+                        "           (et qu'un ratio d'aspect différent entraineras des bandes noires)\n"
                         "-Lucky: Permet d'obtenir une chance infini\n"
                         "\n-h ou --help : Affiche ce menu d'aide\n"
                         "\nCredits : RAIMBAUD Killian & TOUGARD Enzo / 2020\n");
@@ -359,11 +359,11 @@ int main(int argc, char *argv[]){
         Shadow = loadImage(ImagePath"shadow.png", Renderer);
 
         // Sound effects
-        coinIn = loadSoundEffect(SoundPath"payout1.wav");
-        coinIn2 = loadSoundEffect(SoundPath"payout2.wav");
-        coinIn3 = loadSoundEffect(SoundPath"payout3.wav");
-        Jackpot = loadSoundEffect(SoundPath"Jackpot.wav");
-        spin = loadSoundEffect(SoundPath"spin.wav");
+        coinIn = loadSoundEffect(SoundPath"payout1.wav"); Mix_VolumeChunk(coinIn, EFFECTVOLUME);
+        coinIn2 = loadSoundEffect(SoundPath"payout2.wav"); Mix_VolumeChunk(coinIn2, EFFECTVOLUME);
+        coinIn3 = loadSoundEffect(SoundPath"payout3.wav"); Mix_VolumeChunk(coinIn3, EFFECTVOLUME);
+        Jackpot = loadSoundEffect(SoundPath"Jackpot.wav"); Mix_VolumeChunk(Jackpot, EFFECTVOLUME);
+        spin = loadSoundEffect(SoundPath"spin.wav"); Mix_VolumeChunk(spin, EFFECTVOLUME);
 
         // Musics
         casinoBGM = loadMusic(SoundPath"Halos of Eternity.ogg");
@@ -390,7 +390,7 @@ themeini:
         }
 
         Mix_PlayMusic(backgroundMusic, -1);
-        Mix_VolumeMusic(64);
+        Mix_VolumeMusic(SOUNDVOLUME);
 
 scaleini:
         SDL_QueryTexture(Sign, NULL, NULL, &SignDIM.w, &SignDIM.h);
@@ -568,13 +568,13 @@ P1MISE:
                         break;
                     case SDL_SCANCODE_F:
                         if (Fullscreen){
-                            ToWideScreen(&WindowRES, &ScreenRES, &ScallingOffset);
                             SDL_SetWindowFullscreen(MainWindow, 0);
+                            ToWideScreen(&WindowRES, &ScreenRES, &ScallingOffset);
                             Fullscreen = 0;
                             goto scaleini;
                         }else{
-                            ToWideScreen(&FullscreenRES, &ScreenRES, &ScallingOffset);
                             SDL_SetWindowFullscreen(MainWindow, SDL_WINDOW_FULLSCREEN_DESKTOP);
+                            ToWideScreen(&FullscreenRES, &ScreenRES, &ScallingOffset);
                             Fullscreen = 1;
                             goto scaleini;
                         }
@@ -601,10 +601,12 @@ P1MISE:
                     switch (event.window.event)
                     {
                     case SDL_WINDOWEVENT_RESIZED:
-                        WindowRES.x = event.window.data1; // Nouvelle resolution X
-                        WindowRES.y = event.window.data2; // Nouvelle resolution Y
-                        ToWideScreen(&WindowRES, &ScreenRES, &ScallingOffset); // On scale pour que l'affichage reste correct
-                        goto scaleini; // On redimentionne toutes les texture pour correspondre a la nouvelle resolution
+                        if (Fullscreen == 0){
+                            WindowRES.x = event.window.data1; // Nouvelle resolution X
+                            WindowRES.y = event.window.data2; // Nouvelle resolution Y
+                            ToWideScreen(&WindowRES, &ScreenRES, &ScallingOffset); // On scale pour que l'affichage reste correct
+                            goto scaleini; // On redimentionne toutes les texture pour correspondre a la nouvelle resolution
+                        }
                         break;
                     
                     default:
@@ -623,13 +625,13 @@ P1MISE:
 
             // On anime les slots
             if (ReelStep[0] > -2){
-                animateSlots(&Reel1, ReelOffset.y, ReelOffset.x, SlotIndex[0], ReelSpeed, &ReelStep[0]);
+                animateSlots(&Reel1, ReelOffset.y, ReelOffset.x, SlotIndex[0], ReelSpeed * (time - oldTime), &ReelStep[0]);
             }
             if (ReelStep[1] > -2){
-                animateSlots(&Reel2, ReelOffset.y, ReelOffset.x, SlotIndex[1], ReelSpeed, &ReelStep[1]);
+                animateSlots(&Reel2, ReelOffset.y, ReelOffset.x, SlotIndex[1], ReelSpeed * (time - oldTime), &ReelStep[1]);
             }
             if (ReelStep[2] > -2){
-                animateSlots(&Reel3, ReelOffset.y, ReelOffset.x, SlotIndex[2], ReelSpeed, &ReelStep[2]);
+                animateSlots(&Reel3, ReelOffset.y, ReelOffset.x, SlotIndex[2], ReelSpeed * (time - oldTime), &ReelStep[2]);
             }
 
             if ((ReelStep[0] == -2) && (ReelStep[1] == -2) && (ReelStep[2] == -2)){

@@ -14,11 +14,24 @@
     with this program; if not, write to the Free Software Foundation, Inc., \
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
+linuxBuild = cd ./build; gcc -c ../src/*.c; gcc -o ../YASP/yasp *.o $$(sdl2-config --cflags --libs) -lSDL2_mixer -lSDL2_image -Wall
+windowsBuild = ./misc/buildIcon.bat; cd ./build; gcc -D WINDOWS -c ../src/*.c; gcc -o ../YASP/yasp *.o icon.res $$(sdl2-config --cflags --libs) -lSDL2_mixer -lSDL2_image -Wall -mconsole
+
+linuxInstall = cp -r YASP /usr/local/games; cp misc/yasp /usr/local/bin; chmod +x /usr/local/bin/yasp; cp misc/YASP.desktop /usr/share/applications
+windowsInstall = cp -r YASP "C:\Program Files"; echo "Yasp is installed in C:\Program Files"
+
+ifeq (Windows_NT,Windows_NT)
+	OSbuild = $(windowsBuild)
+	OSInstall = $(windowsInstall)
+else
+	OSbuild = $(linuxBuild)
+	OSInstall = $(linuxInstall)
+endif
 
 all: build copy
 
 build: CreateDirectories
-	cd ./build; gcc -c ../src/*.c; gcc -o ../YASP/yasp *.o $$(sdl2-config --cflags --libs) -lSDL2_mixer -lSDL2_image -Wall
+	$(OSbuild)
 
 CreateDirectories:
 	mkdir -p YASP build
@@ -27,14 +40,12 @@ copy: CreateDirectories
 	cp -r assets/* YASP/
 	cp LICENSE YASP/LICENSE
 
-cleanup:
+clean:
 	rm -rf build
 	rm -rf YASP
 
 install:
-	cp -r YASP /usr/local/games
-	cp misc/yasp /usr/local/bin; chmod +x /usr/local/bin/yasp
-	cp misc/YASP.desktop /usr/share/applications
+	$(OSInstall)
 
 uninstall:
 	rm -rf /usr/local/games/YASP
@@ -43,6 +54,3 @@ uninstall:
 
 dependencies:
 	apt install libsdl2-dev libsdl2-mixer-dev libsdl2-image-dev
-
-clean:
-	rm main
