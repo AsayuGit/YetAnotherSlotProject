@@ -20,7 +20,7 @@ windowsBuild = ./misc/buildIcon.bat; cd ./build; gcc -D WINDOWS -c ../src/*.c; g
 linuxInstall = cp -r YASP /usr/local/games; cp misc/yasp /usr/local/bin; chmod +x /usr/local/bin/yasp; cp misc/YASP.desktop /usr/share/applications
 windowsInstall = cp -r YASP "C:\Program Files"; echo "Yasp is installed in C:\Program Files"
 
-ifeq (Windows_NT,Windows_NT)
+ifeq ($(OS),Windows_NT)
 	OSbuild = $(windowsBuild)
 	OSInstall = $(windowsInstall)
 else
