@@ -2,24 +2,24 @@
 YASP aussi appelé "YetAnotherSlotProject" est un simulateur de machine a sous (encore un),
 développé en tant que projet S2 pour l'ESIEA.
 
-Compilation :
+## Compilation :
 
     Afin de compiler yasp, dans le dossier principal executez "make" via le terminal.
     Cela créras un dossier YASP contenant l'ensemble des assets ainsi que l'executable yasp
 
     Le projet est utilisable tel quel et peut être déplacé vers n'importe quel dossier.
 
-Installation :
+## Installation :
 
     Si vous désirez installer yasp comme n'importe quel autre programme,
     executez "sudo make install" dans le terminal
 
-Désinstallation :
+## Désinstallation :
 
     Simmilaire a l'installation, si vous désirez desinstaller yasp de votre système,
     executez "sudo make uninstall".
 
-Execution :
+## Execution :
 
     Afin d'executer yasp, il vous suffit de tapez "yasp" dans votre terminal,
     (si vous l'avez installé).
@@ -29,7 +29,7 @@ Execution :
     Afin de changer de thème rajoutez l'option "-t" suivi du numéro du thème
     ex "yasp -Term -t 1"
 
-Dependences :
+## Dependences :
 
     Afin de pouvoir compiler yasp vérifiez bien que vous possédez toutes les dépendances
     nécessaires.
@@ -40,7 +40,7 @@ Dependences :
 
     Vous pouvez installer les dépendances en executant "make dependencies"
 
-Notes:
+## Notes:
 
     Yasp a été conçu pour fonctionner sur Ubuntu 18.04 et + vérifiez au préalable
     la compatiblité de votre système
