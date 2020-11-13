@@ -2,6 +2,11 @@
 YASP aussi appelé "YetAnotherSlotProject" est un simulateur de machine a sous (encore un),
 développé en tant que projet S2 pour l'ESIEA.
 
+## Screenshots :
+| Neo | Classic |
+| --- | --- |
+| [![](https://raw.githubusercontent.com/AsayuGit/YetAnotherSlotProject/master/Screenshots/Yasp.png?raw=true)](https://raw.githubusercontent.com/AsayuGit/YetAnotherSlotProject/master/Screenshots/Yasp.png?raw=true) | [![](https://raw.githubusercontent.com/AsayuGit/YetAnotherSlotProject/master/Screenshots/Yasp2.png?raw=true)](https://raw.githubusercontent.com/AsayuGit/YetAnotherSlotProject/master/Screenshots/Yasp2.png?raw=true) |
+
 ## Compilation :
 
     Afin de compiler yasp, dans le dossier principal executez "make" via le terminal.
