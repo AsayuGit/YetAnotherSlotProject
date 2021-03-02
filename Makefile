@@ -14,27 +14,18 @@
     with this program; if not, write to the Free Software Foundation, Inc., \
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
-linuxBuild = cd ./build; gcc -c ../src/*.c; gcc -o ../YASP/yasp *.o $$(sdl2-config --cflags --libs) -lSDL2_mixer -lSDL2_image -Wall
-windowsBuild = ./misc/buildIcon.bat; cd ./build; gcc -D WINDOWS -c ../src/*.c; gcc -o ../YASP/yasp *.o icon.res $$(sdl2-config --cflags --libs) -lSDL2_mixer -lSDL2_image -Wall -mconsole
-
-linuxInstall = cp -r YASP /usr/local/games; cp misc/yasp /usr/local/bin; chmod +x /usr/local/bin/yasp; cp misc/YASP.desktop /usr/share/applications
-windowsInstall = cp -r YASP "C:\Program Files"; echo "Yasp is installed in C:\Program Files"
-
-ifeq ($(OS),Windows_NT)
-	OSbuild = $(windowsBuild)
-	OSInstall = $(windowsInstall)
-else
-	OSbuild = $(linuxBuild)
-	OSInstall = $(linuxInstall)
-endif
-
 all: build copy
-
-build: CreateDirectories
-	$(OSbuild)
 
 CreateDirectories:
 	mkdir -p YASP build
+
+build: CreateDirectories
+ifeq ($(OS),Windows_NT)
+	./misc/buildIcon.bat
+	cd ./build; gcc -D WINDOWS -c ../src/*.c; gcc -o ../YASP/yasp *.o icon.res $$(sdl2-config --cflags --libs) -lSDL2_mixer -lSDL2_image -Wall -mconsole
+else
+	cd ./build; gcc -c ../src/*.c; gcc -o ../YASP/yasp *.o $$(sdl2-config --cflags --libs) -lSDL2_mixer -lSDL2_image -Wall
+endif
 
 copy: CreateDirectories
 	cp -r assets/* YASP/
@@ -45,12 +36,23 @@ clean:
 	rm -rf YASP
 
 install:
-	$(OSInstall)
-
+ifeq ($(OS),Windows_NT)
+	cp -r YASP "C:\Program Files"; echo "Yasp is installed in C:\Program Files"
+else
+	mkdir -p $(DESTDIR)/usr/local/games $(DESTDIR)/usr/local/bin $(DESTDIR)/usr/share/applications
+	cp -r YASP $(DESTDIR)/usr/local/games
+	cp misc/yasp $(DESTDIR)/usr/local/bin
+	chmod +x $(DESTDIR)/usr/local/bin/yasp
+	cp misc/YASP.desktop $(DESTDIR)/usr/share/applications
+endif
+	
 uninstall:
 	rm -rf /usr/local/games/YASP
 	rm /usr/local/bin/yasp
 	rm /usr/share/applications/YASP.desktop
 
-dependencies:
+aptDep:
 	apt install libsdl2-dev libsdl2-mixer-dev libsdl2-image-dev
+
+pacDep:
+	pacman -S sdl2 sdl2_image sdl2_mixer
